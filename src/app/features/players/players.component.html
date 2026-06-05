@@ -1,0 +1,130 @@
+<div class="players-page">
+  <div class="page-header">
+    <h1>Players</h1>
+    <button class="btn btn--primary" (click)="openNewForm()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 4v16m8-8H4" stroke-linecap="round"/></svg>
+      Add Player
+    </button>
+  </div>
+
+  <div class="players-body">
+    <!-- Roster list -->
+    <aside class="roster-panel">
+      @if (isEmpty()) {
+        <div class="empty-state">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <p>No players yet</p>
+          <button class="btn btn--ghost" (click)="openNewForm()">Add your first player</button>
+        </div>
+      }
+      @for (player of players(); track player.id) {
+        <div class="player-card" [class.selected]="selectedPlayer()?.id === player.id" (click)="selectPlayer(player)">
+          <div class="player-card__avatar">{{ player.number }}</div>
+          <div class="player-card__info">
+            <span class="name">{{ player.name }}</span>
+            <span class="pos">{{ player.position }}</span>
+          </div>
+          <button class="btn btn--ghost btn--sm" (click)="$event.stopPropagation(); openEditForm(player)">Edit</button>
+        </div>
+      }
+    </aside>
+
+    <!-- Player detail / notes -->
+    @if (hasSelection()) {
+      <section class="player-detail">
+        <div class="player-detail__header">
+          <div class="avatar-lg">{{ selectedPlayer()!.number }}</div>
+          <div>
+            <h2>{{ selectedPlayer()!.name }}</h2>
+            <p>{{ selectedPlayer()!.position }} &bull; {{ selectedPlayer()!.height }} &bull; {{ selectedPlayer()!.dominant_hand }} handed</p>
+          </div>
+          <button class="btn btn--danger" style="margin-left:auto" (click)="deletePlayer(selectedPlayer()!.id!)">Delete</button>
+        </div>
+
+        <div class="notes-section">
+          <h3>Notes</h3>
+          <div class="note-form card">
+            <div style="display:flex;gap:10px;margin-bottom:10px">
+              <div class="form-group" style="flex:1">
+                <label>Date</label>
+                <input type="date" [(ngModel)]="newNote.date"/>
+              </div>
+              <div class="form-group" style="flex:1">
+                <label>Category</label>
+                <select [(ngModel)]="newNote.category">
+                  @for (cat of noteCategories; track cat) {
+                    <option [value]="cat">{{ cat | titlecase }}</option>
+                  }
+                </select>
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Note</label>
+              <textarea rows="3" [(ngModel)]="newNote.content" placeholder="Observation, feedback, stats..."></textarea>
+            </div>
+            <button class="btn btn--primary" (click)="saveNote()">Add Note</button>
+          </div>
+
+          <div class="notes-list">
+            @for (note of notes(); track note.id) {
+              <div class="note-item card">
+                <div class="note-item__meta">
+                  <span class="badge badge--{{ note.category }}">{{ note.category }}</span>
+                  <span class="date">{{ note.date }}</span>
+                  <button class="btn btn--danger btn--xs" style="margin-left:auto" (click)="deleteNote(note.id!)">✕</button>
+                </div>
+                <p>{{ note.content }}</p>
+              </div>
+            }
+          </div>
+        </div>
+      </section>
+    } @else {
+      <div class="no-selection empty-state">
+        <p>Select a player to view their notes</p>
+      </div>
+    }
+  </div>
+
+  <!-- Player form modal -->
+  @if (showForm()) {
+    <div class="modal-overlay" (click)="showForm.set(false)">
+      <div class="modal card" (click)="$event.stopPropagation()">
+        <h2>{{ editingPlayer.id ? 'Edit Player' : 'New Player' }}</h2>
+        <div class="form-group">
+          <label>Name</label>
+          <input type="text" [(ngModel)]="editingPlayer.name" placeholder="Player name"/>
+        </div>
+        <div style="display:flex;gap:10px">
+          <div class="form-group" style="flex:1">
+            <label>Number</label>
+            <input type="number" [(ngModel)]="editingPlayer.number" placeholder="#"/>
+          </div>
+          <div class="form-group" style="flex:1">
+            <label>Position</label>
+            <select [(ngModel)]="editingPlayer.position">
+              @for (pos of positions; track pos) { <option [value]="pos">{{ pos }}</option> }
+            </select>
+          </div>
+        </div>
+        <div style="display:flex;gap:10px">
+          <div class="form-group" style="flex:1">
+            <label>Height</label>
+            <input type="text" [(ngModel)]="editingPlayer.height" placeholder="e.g. 6'4&quot;"/>
+          </div>
+          <div class="form-group" style="flex:1">
+            <label>Dominant Hand</label>
+            <select [(ngModel)]="editingPlayer.dominant_hand">
+              <option value="right">Right</option>
+              <option value="left">Left</option>
+            </select>
+          </div>
+        </div>
+        <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:8px">
+          <button class="btn btn--ghost" (click)="showForm.set(false)">Cancel</button>
+          <button class="btn btn--primary" (click)="savePlayer()">Save</button>
+        </div>
+      </div>
+    </div>
+  }
+</div>

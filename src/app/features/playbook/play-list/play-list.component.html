@@ -1,0 +1,46 @@
+<div class="play-list-page">
+  <div class="page-header">
+    <h1>Playbook</h1>
+    <button class="btn btn--primary" (click)="openEditor()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 4v16m8-8H4" stroke-linecap="round"/></svg>
+      New Play
+    </button>
+  </div>
+
+  <div class="page-body">
+    @if (isEmpty()) {
+      <div class="empty-state">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M9 17.25v1.007a3 3 0 01-.879 2.122L7.5 21h9l-.621-.621A3 3 0 0115 18.257V17.25m6-12V15a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 15V5.25m18 0A2.25 2.25 0 0018.75 3H5.25A2.25 2.25 0 003 5.25m18 0H3" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <p>No plays yet. Create your first play!</p>
+        <button class="btn btn--primary" (click)="openEditor()">Create Play</button>
+      </div>
+    }
+
+    <div class="plays-grid">
+      @for (play of plays(); track play.id) {
+        <div class="play-card" (click)="openEditor(play.id)">
+          <div class="play-card__thumbnail">
+            @if (play.thumbnail) {
+              <img [src]="play.thumbnail" alt="Play thumbnail"/>
+            } @else {
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"><circle cx="12" cy="12" r="10"/><path d="M12 2v20M2 12h20"/></svg>
+            }
+          </div>
+          <div class="play-card__body">
+            <div class="play-card__title">{{ play.name }}</div>
+            <div class="play-card__meta">
+              <span [class]="categoryClass(play.category)">{{ play.category }}</span>
+              <span class="date">{{ play.updated_at | date:'MMM d, y' }}</span>
+            </div>
+            @if (play.description) {
+              <p class="play-card__desc">{{ play.description }}</p>
+            }
+          </div>
+          <button class="play-card__delete btn btn--danger" (click)="deletePlay(play.id!, $event)">✕</button>
+        </div>
+      }
+    </div>
+  </div>
+</div>

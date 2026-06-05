@@ -1,0 +1,29 @@
+<div class="app-shell">
+  <nav class="sidebar">
+    <div class="sidebar__brand">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <circle cx="12" cy="12" r="10"/>
+        <path d="M12 2a10 10 0 010 20M12 2a10 10 0 000 20M2 12h20"/>
+        <path d="M4.93 4.93a10 10 0 0014.14 14.14M4.93 19.07A10 10 0 0119.07 4.93"/>
+      </svg>
+      <span>CoachDiary</span>
+    </div>
+
+    <ul class="sidebar__nav">
+      @for (item of navItems; track item.path) {
+        <li>
+          <a [routerLink]="item.path" routerLinkActive="active" class="nav-link">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path [attr.d]="item.icon" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <span>{{ item.label }}</span>
+          </a>
+        </li>
+      }
+    </ul>
+  </nav>
+
+  <main class="main-content">
+    <router-outlet/>
+  </main>
+</div>

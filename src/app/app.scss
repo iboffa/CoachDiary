@@ -1,0 +1,94 @@
+:host {
+  display: block;
+  height: 100vh;
+}
+
+.app-shell {
+  display: flex;
+  height: 100vh;
+  background: #0f1117;
+  color: #e8eaf0;
+  font-family: 'Inter', system-ui, sans-serif;
+}
+
+.sidebar {
+  width: 220px;
+  flex-shrink: 0;
+  background: #161b27;
+  border-right: 1px solid #2a2f3e;
+  display: flex;
+  flex-direction: column;
+  padding: 20px 0;
+
+  &__brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0 20px 24px;
+    border-bottom: 1px solid #2a2f3e;
+    margin-bottom: 16px;
+
+    svg {
+      width: 28px;
+      height: 28px;
+      color: #f97316;
+      flex-shrink: 0;
+    }
+
+    span {
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: -0.3px;
+      color: #f1f3f8;
+    }
+  }
+
+  &__nav {
+    list-style: none;
+    margin: 0;
+    padding: 0 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+}
+
+.nav-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  border-radius: 8px;
+  text-decoration: none;
+  color: #8892a4;
+  font-size: 14px;
+  font-weight: 500;
+  transition: background 0.15s, color 0.15s;
+
+  svg {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+  }
+
+  &:hover {
+    background: #1e2536;
+    color: #c8d0e0;
+  }
+
+  &.active {
+    background: #1e3a5f;
+    color: #60a5fa;
+
+    svg {
+      color: #60a5fa;
+    }
+  }
+}
+
+.main-content {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}

@@ -1,0 +1,85 @@
+export interface Player {
+  id?: number;
+  name: string;
+  number: number;
+  position: 'PG' | 'SG' | 'SF' | 'PF' | 'C' | '';
+  height?: string;
+  weight?: string;
+  dominant_hand?: 'left' | 'right';
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface PlayerNote {
+  id?: number;
+  player_id: number;
+  date: string;
+  category: 'general' | 'technical' | 'physical' | 'mental' | 'game';
+  content: string;
+  created_at?: string;
+}
+
+export interface Play {
+  id?: number;
+  name: string;
+  description?: string;
+  category: 'offense' | 'defense' | 'transition' | 'inbound' | 'press-break';
+  canvas_state: string;
+  thumbnail?: string | null;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface PlaySummary extends Omit<Play, 'canvas_state'> {}
+
+export interface Drill {
+  id: string;
+  name: string;
+  duration_minutes: number;
+  description?: string;
+}
+
+export interface TrainingSession {
+  id?: number;
+  name: string;
+  date?: string;
+  duration_minutes?: number;
+  focus?: string;
+  notes?: string;
+  drills: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface SeasonEvent {
+  id: string;
+  type: 'game' | 'training' | 'rest' | 'travel';
+  date: string;
+  title: string;
+  opponent?: string;
+  location?: string;
+  training_session_id?: number;
+  notes?: string;
+}
+
+export interface SeasonPlan {
+  id?: number;
+  name: string;
+  season_year?: string;
+  start_date?: string;
+  end_date?: string;
+  goals?: string;
+  events: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface GameNote {
+  id?: number;
+  date: string;
+  opponent?: string;
+  score?: string;
+  location?: string;
+  content: string;
+  created_at?: string;
+}
