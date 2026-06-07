@@ -1,6 +1,7 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { TitleCasePipe } from '@angular/common';
+import { ActivatedRoute } from '@angular/router';
 import { PlayerService } from '../../core/services/player.service';
 import { Player, PlayerNote } from '../../shared/models/models';
 
@@ -12,6 +13,14 @@ import { Player, PlayerNote } from '../../shared/models/models';
 })
 export class PlayersComponent {
   private readonly playerService = inject(PlayerService);
+  private readonly route = inject(ActivatedRoute);
+
+  private readonly teamId: number | null = (() => {
+    const raw = this.route.snapshot.paramMap.get('teamId');
+    if (!raw) return null;
+    const n = parseInt(raw, 10);
+    return isNaN(n) ? null : n;
+  })();
 
   readonly players        = signal<Player[]>([]);
   readonly selectedPlayer = signal<Player | null>(null);
@@ -24,7 +33,6 @@ export class PlayersComponent {
   readonly positions      = ['PG', 'SG', 'SF', 'PF', 'C'] as const;
   readonly noteCategories = ['general', 'technical', 'physical', 'mental', 'game'] as const;
 
-  // Plain objects for form binding — signals would require verbose template plumbing with ngModel
   editingPlayer: Partial<Player> = {};
   newNote: Partial<PlayerNote> = this.freshNote();
 
@@ -33,7 +41,7 @@ export class PlayersComponent {
   }
 
   private async loadPlayers(): Promise<void> {
-    this.players.set(await this.playerService.list());
+    this.players.set(await this.playerService.list(this.teamId ?? undefined));
   }
 
   async selectPlayer(player: Player): Promise<void> {
@@ -52,7 +60,11 @@ export class PlayersComponent {
   }
 
   async savePlayer(): Promise<void> {
-    await this.playerService.save(this.editingPlayer as Player);
+    const player: Player = {
+      ...this.editingPlayer as Player,
+      team_id: this.teamId ?? undefined,
+    };
+    await this.playerService.save(player);
     this.showForm.set(false);
     await this.loadPlayers();
   }
