@@ -6,7 +6,7 @@ import { Player, PlayerNote } from '../../shared/models/models';
 export class PlayerService {
   constructor(private db: DbService) {}
 
-  list(): Promise<Player[]> { return this.db.listPlayers(); }
+  list(teamId?: number): Promise<Player[]> { return this.db.listPlayers(teamId); }
   get(id: number): Promise<Player | undefined> { return this.db.getPlayer(id); }
   save(player: Player): Promise<number> { return this.db.savePlayer(player); }
   delete(id: number): Promise<void> { return this.db.deletePlayer(id); }

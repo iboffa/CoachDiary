@@ -1,5 +1,40 @@
+export interface Team {
+  id?: number;
+  name: string;
+  description?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface Opponent {
+  id?: number;
+  team_id: number;
+  name: string;
+  notes?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface OpponentPlayer {
+  id?: number;
+  opponent_id: number;
+  name: string;
+  number: number;
+  position: 'PG' | 'SG' | 'SF' | 'PF' | 'C' | '';
+  notes?: string;
+}
+
+export interface OpponentNote {
+  id?: number;
+  opponent_id: number;
+  date: string;
+  content: string;
+  created_at?: string;
+}
+
 export interface Player {
   id?: number;
+  team_id?: number;
   name: string;
   number: number;
   position: 'PG' | 'SG' | 'SF' | 'PF' | 'C' | '';
@@ -21,11 +56,14 @@ export interface PlayerNote {
 
 export interface Play {
   id?: number;
+  team_id?: number;
+  opponent_id?: number;
   name: string;
   description?: string;
   category: 'offense' | 'defense' | 'transition' | 'inbound' | 'press-break';
   canvas_state: string;
   thumbnail?: string | null;
+  is_template?: boolean;
   created_at?: string;
   updated_at?: string;
 }
