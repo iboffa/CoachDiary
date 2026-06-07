@@ -1,0 +1,72 @@
+<div class="opponent-list-page">
+  <div class="page-header">
+    <h1>Opponents</h1>
+    <button class="btn btn--primary" (click)="openNewForm()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 4v16m8-8H4" stroke-linecap="round"/></svg>
+      Add Opponent
+    </button>
+  </div>
+
+  <div class="page-body">
+    @if (isEmpty()) {
+      <div class="empty-state">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2">
+          <path d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <p>No opponents added yet.</p>
+        <button class="btn btn--primary" (click)="openNewForm()">Add Opponent</button>
+      </div>
+    }
+
+    <div class="opponents-list">
+      @for (opp of opponents(); track opp.id) {
+        <div class="opponent-row" (click)="openOpponent(opp.id!)">
+          <div class="opponent-row__avatar">
+            {{ opp.name.charAt(0).toUpperCase() }}
+          </div>
+          <div class="opponent-row__body">
+            <div class="opponent-row__name">{{ opp.name }}</div>
+            @if (opp.notes) {
+              <div class="opponent-row__notes">{{ opp.notes }}</div>
+            }
+          </div>
+          <div class="opponent-row__actions" (click)="$event.stopPropagation()">
+            <button class="card-action-btn card-action-btn--danger" (click)="deleteOpponent(opp.id!, $event)" title="Delete">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+          </div>
+          <div class="opponent-row__arrow">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8.25 4.5l7.5 7.5-7.5 7.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+        </div>
+      }
+    </div>
+  </div>
+</div>
+
+@if (showForm()) {
+  <div class="modal-backdrop" (click)="closeForm()">
+    <div class="modal" (click)="$event.stopPropagation()">
+      <div class="modal__header">
+        <h2>New Opponent</h2>
+        <button class="modal__close" (click)="closeForm()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 18L18 6M6 6l12 12" stroke-linecap="round"/></svg>
+        </button>
+      </div>
+      <div class="modal__body">
+        <div class="form-group">
+          <label>Team Name</label>
+          <input type="text" class="form-control" placeholder="e.g. Bulls" [(ngModel)]="editingOpponent.name" (keydown.enter)="saveOpponent()"/>
+        </div>
+        <div class="form-group">
+          <label>Notes <span class="optional">(optional)</span></label>
+          <input type="text" class="form-control" placeholder="e.g. Conference rivals" [(ngModel)]="editingOpponent.notes"/>
+        </div>
+      </div>
+      <div class="modal__footer">
+        <button class="btn btn--ghost" (click)="closeForm()">Cancel</button>
+        <button class="btn btn--primary" (click)="saveOpponent()">Add Opponent</button>
+      </div>
+    </div>
+  </div>
+}

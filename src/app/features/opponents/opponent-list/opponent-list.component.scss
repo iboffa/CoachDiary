@@ -1,0 +1,125 @@
+.opponent-list-page {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.page-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.opponents-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.opponent-row {
+  background: #161b27;
+  border: 1px solid #2a2f3e;
+  border-radius: 10px;
+  padding: 14px 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  position: relative;
+  transition: border-color 0.15s, transform 0.12s;
+
+  &:hover {
+    border-color: #2563eb60;
+    transform: translateX(2px);
+
+    .opponent-row__actions { opacity: 1; }
+    .opponent-row__arrow { color: #60a5fa; }
+  }
+
+  &__avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    background: #1e2a45;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    font-weight: 700;
+    color: #60a5fa;
+    flex-shrink: 0;
+  }
+
+  &__body {
+    flex: 1;
+    min-width: 0;
+    padding-right: 60px;
+  }
+
+  &__name {
+    font-size: 14px;
+    font-weight: 600;
+    color: #e8eaf0;
+    margin-bottom: 2px;
+  }
+
+  &__notes {
+    font-size: 12px;
+    color: #8892a4;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &__actions {
+    position: absolute;
+    right: 36px;
+    display: flex;
+    gap: 4px;
+    opacity: 0;
+    transition: opacity 0.15s;
+  }
+
+  &__arrow {
+    color: #4a5568;
+    flex-shrink: 0;
+    transition: color 0.15s;
+    svg { width: 16px; height: 16px; }
+  }
+}
+
+.card-action-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: none;
+  background: #1e2536cc;
+  color: #8892a4;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+  backdrop-filter: blur(4px);
+
+  svg { width: 14px; height: 14px; }
+
+  &--danger:hover { background: #dc2626; color: #fff; }
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  gap: 16px;
+  color: #8892a4;
+  padding: 60px 20px;
+
+  svg { width: 52px; height: 52px; opacity: 0.4; }
+  p { margin: 0; font-size: 14px; text-align: center; }
+}

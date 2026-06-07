@@ -1,0 +1,130 @@
+<div class="opp-detail-page">
+  <div class="page-header">
+    <div class="page-header__info">
+      <div class="opp-avatar">{{ opponent()?.name?.charAt(0)?.toUpperCase() }}</div>
+      <div>
+        <h1>{{ opponent()?.name }}</h1>
+        @if (opponent()?.notes) {
+          <p class="opp-note">{{ opponent()?.notes }}</p>
+        }
+      </div>
+    </div>
+    <button class="btn btn--accent" (click)="goToPlaybook()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 17.25v1.007a3 3 0 01-.879 2.122L7.5 21h9l-.621-.621A3 3 0 0115 18.257V17.25m6-12V15a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 15V5.25m18 0A2.25 2.25 0 0018.75 3H5.25A2.25 2.25 0 003 5.25m18 0H3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      View Playbook
+    </button>
+  </div>
+
+  <div class="tabs">
+    <button class="tab-btn" [class.active]="activeTab() === 'notes'" (click)="setTab('notes')">Notes</button>
+    <button class="tab-btn" [class.active]="activeTab() === 'roster'" (click)="setTab('roster')">Roster</button>
+  </div>
+
+  <div class="tab-content">
+    @if (activeTab() === 'notes') {
+      <div class="notes-panel">
+        <div class="add-note-form">
+          <div class="form-row">
+            <input type="date" class="form-control form-control--sm" [(ngModel)]="newNote.date"/>
+            <input type="text" class="form-control" placeholder="Add a scouting note…" [(ngModel)]="newNote.content" (keydown.enter)="addNote()"/>
+            <button class="btn btn--primary btn--sm" (click)="addNote()">Add</button>
+          </div>
+        </div>
+
+        @if (notes().length === 0) {
+          <div class="empty-hint">No notes yet. Add your first scouting note.</div>
+        }
+
+        <div class="notes-list">
+          @for (note of notes(); track note.id) {
+            <div class="note-item">
+              <div class="note-item__date">{{ note.date | date:'MMM d, y' }}</div>
+              <div class="note-item__content">{{ note.content }}</div>
+              <button class="note-item__delete" (click)="deleteNote(note.id!)" title="Delete note">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 18L18 6M6 6l12 12" stroke-linecap="round"/></svg>
+              </button>
+            </div>
+          }
+        </div>
+      </div>
+    }
+
+    @if (activeTab() === 'roster') {
+      <div class="roster-panel">
+        <div class="roster-header">
+          <span>{{ players().length }} player{{ players().length === 1 ? '' : 's' }}</span>
+          <button class="btn btn--primary btn--sm" (click)="openPlayerForm()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 4v16m8-8H4" stroke-linecap="round"/></svg>
+            Add Player
+          </button>
+        </div>
+
+        @if (players().length === 0) {
+          <div class="empty-hint">No players in roster yet.</div>
+        }
+
+        <div class="roster-list">
+          @for (player of players(); track player.id) {
+            <div class="player-row">
+              <div class="player-row__num">#{{ player.number }}</div>
+              <div class="player-row__body">
+                <div class="player-row__name">{{ player.name }}</div>
+                @if (player.position) {
+                  <span class="badge badge--pos">{{ player.position }}</span>
+                }
+                @if (player.notes) {
+                  <div class="player-row__notes">{{ player.notes }}</div>
+                }
+              </div>
+              <button class="icon-btn icon-btn--danger" (click)="deletePlayer(player.id!)" title="Remove">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </button>
+            </div>
+          }
+        </div>
+      </div>
+    }
+  </div>
+</div>
+
+@if (showPlayerForm()) {
+  <div class="modal-backdrop" (click)="closePlayerForm()">
+    <div class="modal" (click)="$event.stopPropagation()">
+      <div class="modal__header">
+        <h2>Add Player</h2>
+        <button class="modal__close" (click)="closePlayerForm()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 18L18 6M6 6l12 12" stroke-linecap="round"/></svg>
+        </button>
+      </div>
+      <div class="modal__body">
+        <div class="form-row">
+          <div class="form-group" style="flex:1">
+            <label>Name</label>
+            <input type="text" class="form-control" placeholder="Player name" [(ngModel)]="editingPlayer.name"/>
+          </div>
+          <div class="form-group" style="width:80px">
+            <label>#</label>
+            <input type="number" class="form-control" placeholder="00" [(ngModel)]="editingPlayer.number"/>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Position</label>
+          <select class="form-control" [(ngModel)]="editingPlayer.position">
+            <option value="">—</option>
+            @for (pos of positions; track pos) {
+              <option [value]="pos">{{ pos }}</option>
+            }
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Notes <span class="optional">(optional)</span></label>
+          <input type="text" class="form-control" placeholder="e.g. strong shooter" [(ngModel)]="editingPlayer.notes"/>
+        </div>
+      </div>
+      <div class="modal__footer">
+        <button class="btn btn--ghost" (click)="closePlayerForm()">Cancel</button>
+        <button class="btn btn--primary" (click)="savePlayer()">Add Player</button>
+      </div>
+    </div>
+  </div>
+}
