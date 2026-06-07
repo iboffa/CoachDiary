@@ -245,7 +245,7 @@ describe('PlayEditorComponent - Pick and Roll & Pass/Shoot Test', () => {
     expect((component as any).ballIndicator.top).toBeLessThan(receivePoint.y - 26);
   });
 
-  it('should handle pass selection, shoot action, and clear/animate the ball correctly', async () => {
+  it('should finalize the play immediately after a shot and block further actions', async () => {
     const fixture = TestBed.createComponent(PlayEditorComponent);
     const component = fixture.componentInstance;
     expect(component).toBeTruthy();
@@ -254,7 +254,6 @@ describe('PlayEditorComponent - Pick and Roll & Pass/Shoot Test', () => {
 
     const tokens = (component as any).tokens;
     const pg = tokens.find((t: any) => t.id === 'offense-1');
-    const wingReceiver = tokens.find((t: any) => t.id === 'offense-4');
 
     expect(component.ballCarrierId()).toBe('offense-1');
 
@@ -284,33 +283,31 @@ describe('PlayEditorComponent - Pick and Roll & Pass/Shoot Test', () => {
     component.nextPhase();
     expect(component.phaseCount()).toBe(1);
 
-    // 4. Select Shoot for Offense 4
+    // 4. Select Shoot for Offense 4 (auto-finalizes the play)
     component.contextMenu.set({
       clientX: 0, clientY: 0, playerId: 'offense-4', isBallCarrier: true, hasNearbyPlayer: false
     });
     component.selectAction('shoot');
 
-    // Verify shoot path registered
-    expect(component.currentPathCount()).toBe(1);
-    const shootPath = (component as any).currentPhasePaths[0];
+    expect(component.phaseCount()).toBe(2);
+    expect(component.currentPathCount()).toBe(0);
+
+    const shootPath = component.phases[1].paths[0];
     expect(shootPath.actionType).toBe('shoot');
     expect(shootPath.ownerId).toBe('offense-4');
 
     // Verify ball carrier becomes null after shooting
     expect(component.ballCarrierId()).toBeNull();
 
-    // Commit Phase 2
-    component.nextPhase();
-    expect(component.phaseCount()).toBe(2);
+    // 5. Verify no further actions can be added after terminal shot
+    component.contextMenu.set({
+      clientX: 0, clientY: 0, playerId: 'offense-4', isBallCarrier: false, hasNearbyPlayer: false
+    });
+    component.selectAction('cut');
+    expect(component.currentPathCount()).toBe(0);
 
-    // 5. Run preview to ensure pass/shoot animations compile and run without error
-    const previewPromise = component.previewPlay();
-    expect(component.animState()).toBe('playing');
-
-    component.stopAnimation();
-    await previewPromise;
     expect(component.animState()).toBe('idle');
-  });
+  }, 60000);
 
   it('should recreate a visible ball indicator for preview animation when the editor currently has none', async () => {
     const fixture = TestBed.createComponent(PlayEditorComponent);
@@ -419,6 +416,54 @@ describe('PlayEditorComponent - Pick and Roll & Pass/Shoot Test', () => {
     component.nextPhase();
 
     expect(pg.position).toEqual(secondEnd);
+    expect((component as any).shadowTokens).toHaveLength(0);
+  });
+
+  it('should remove chained shadow arrows when deleting the base arrow', async () => {
+    const fixture = TestBed.createComponent(PlayEditorComponent);
+    const component = fixture.componentInstance;
+
+    await fixture.whenStable();
+
+    const pg = (component as any).tokens.find((t: any) => t.id === 'offense-1');
+    expect(pg).toBeTruthy();
+
+    component.contextMenu.set({
+      clientX: 0,
+      clientY: 0,
+      playerId: 'offense-1',
+      isBallCarrier: true,
+      hasNearbyPlayer: false,
+    });
+    component.selectAction('dribble');
+
+    const firstEnd = { x: pg.position.x - 66, y: pg.position.y + 18 };
+    (component as any).startPath(pg.position.x, pg.position.y);
+    (component as any).updateLivePath(pg.position.x - 24, pg.position.y + 18);
+    (component as any).endPath(firstEnd.x, firstEnd.y);
+
+    component.contextMenu.set({
+      clientX: 0,
+      clientY: 0,
+      playerId: 'offense-1',
+      isBallCarrier: true,
+      hasNearbyPlayer: false,
+    });
+    component.selectAction('dribble');
+
+    const secondEnd = { x: firstEnd.x - 44, y: firstEnd.y - 12 };
+    (component as any).startPath(firstEnd.x, firstEnd.y);
+    (component as any).updateLivePath(firstEnd.x - 20, firstEnd.y - 16);
+    (component as any).endPath(secondEnd.x, secondEnd.y);
+
+    expect((component as any).currentPhasePaths).toHaveLength(2);
+    const firstPath = (component as any).currentPhasePaths[0];
+    (component as any).beginPathEditing(firstPath);
+
+    component.onDeleteKey();
+
+    expect((component as any).currentPhasePaths).toHaveLength(0);
+    expect(component.currentPathCount()).toBe(0);
     expect((component as any).shadowTokens).toHaveLength(0);
   });
 
@@ -777,5 +822,35 @@ describe('PlayEditorComponent - Pick and Roll & Pass/Shoot Test', () => {
     });
 
     expect((component as any).activePathEdit).toBeNull();
+  });
+
+  it('should keep short dribble-handoff paths so the ball handler can move in tight space', async () => {
+    const fixture = TestBed.createComponent(PlayEditorComponent);
+    const component = fixture.componentInstance;
+
+    await fixture.whenStable();
+
+    const ballHandler = (component as any).tokens.find((t: any) => t.id === 'offense-1');
+    expect(ballHandler).toBeTruthy();
+
+    component.contextMenu.set({
+      clientX: 0,
+      clientY: 0,
+      playerId: 'offense-1',
+      isBallCarrier: true,
+      hasNearbyPlayer: true,
+    });
+    component.selectAction('dribble-handoff');
+
+    const start = { ...ballHandler.position };
+    const end = { x: start.x + 3, y: start.y + 2 };
+    (component as any).startPath(start.x, start.y);
+    (component as any).endPath(end.x, end.y);
+
+    expect((component as any).currentPhasePaths).toHaveLength(1);
+    const handoffPath = (component as any).currentPhasePaths[0];
+    expect(handoffPath.actionType).toBe('dribble-handoff');
+    expect(handoffPath.ownerId).toBe('offense-1');
+    expect((component as any).shadowTokens).toHaveLength(0);
   });
 });

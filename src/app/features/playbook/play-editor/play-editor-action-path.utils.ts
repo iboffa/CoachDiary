@@ -5,6 +5,7 @@ import { buildMovementSplinePoints } from './play-editor-path.utils';
 const LIVE_DRAW_POINT_THRESHOLD = 6;
 const END_POINT_MERGE_THRESHOLD = 1;
 const MIN_PATH_SPAN = 6;
+const MIN_HANDOFF_SPAN = 2;
 const SHOOT_CONTROL_CLEARANCE = 50;
 
 interface BuildDrawnMovementPathOptions {
@@ -58,8 +59,9 @@ export function buildDrawnMovementStoredPath({
 }: BuildDrawnMovementPathOptions): StoredPath | null {
   const normalizedSamples = normalizeDrawSamples(samples, endPoint);
   const points = buildMovementSplinePoints(normalizedSamples);
+  const minSpan = actionType === 'dribble-handoff' ? MIN_HANDOFF_SPAN : MIN_PATH_SPAN;
 
-  if (points.length < 2 || Math.hypot(points[points.length - 1].x - points[0].x, points[points.length - 1].y - points[0].y) < MIN_PATH_SPAN) {
+  if (points.length < 2 || Math.hypot(points[points.length - 1].x - points[0].x, points[points.length - 1].y - points[0].y) < minSpan) {
     return null;
   }
 

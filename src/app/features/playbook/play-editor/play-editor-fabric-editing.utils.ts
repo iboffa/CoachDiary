@@ -1,5 +1,5 @@
 import { Circle, FabricObject, Group } from 'fabric';
-import { PATH_STYLES, TOKEN_RADIUS } from './play-editor.constants';
+import { PATH_STYLES } from './play-editor.constants';
 import {
   ensureEditableMovementPoints,
   findLatestMovementPath,
@@ -77,6 +77,19 @@ export interface ErasePlayEditorObjectResult {
   erased: boolean;
 }
 
+function arePointsEqual(a?: Point, b?: Point): boolean {
+  if (!a || !b) return false;
+  return Math.hypot(a.x - b.x, a.y - b.y) < 0.001;
+}
+
+function isPassLikeAction(action: PhasePath['actionType']): boolean {
+  return action === 'pass' || action === 'dribble-handoff';
+}
+
+function isBallDependentAction(action: PhasePath['actionType']): boolean {
+  return isPassLikeAction(action) || action === 'shoot';
+}
+
 export function createPathControlHandle(path: PhasePath): Circle {
   const style = PATH_STYLES[path.actionType];
   const handle = new Circle({
@@ -147,7 +160,7 @@ export function syncDraggedShadowPlaceholder({
   }
 
   shadow.position = { ...end };
-  shadow.fabricGroup.set({ left: end.x - TOKEN_RADIUS, top: end.y - TOKEN_RADIUS });
+  shadow.fabricGroup.set({ left: end.x, top: end.y });
   shadow.fabricGroup.setCoords();
   const others = shadowTokens.filter(candidate => candidate.ownerId !== shadow.ownerId || candidate === shadow);
   const nextShadowTokens = [...others.filter(candidate => candidate !== shadow), shadow];
@@ -190,8 +203,8 @@ export function refreshShadowTokens({
     if (restoredPosition) {
       draggedShadow.position = restoredPosition;
       draggedShadow.fabricGroup.set({
-        left: restoredPosition.x - TOKEN_RADIUS,
-        top: restoredPosition.y - TOKEN_RADIUS,
+        left: restoredPosition.x,
+        top: restoredPosition.y,
       });
       draggedShadow.fabricGroup.setCoords();
       fabricCanvas.add(draggedShadow.fabricGroup);
@@ -320,16 +333,59 @@ export function erasePlayEditorObject({
 
   const pathIndex = currentPhasePaths.findIndex(path => path.fabricObjects.includes(object));
   if (pathIndex !== -1) {
-    if (activePathEdit?.path === currentPhasePaths[pathIndex]) {
+    const basePath = currentPhasePaths[pathIndex];
+    const removedPathIndexes = new Set<number>([pathIndex]);
+
+    if (isPassLikeAction(basePath.actionType) && basePath.targetId) {
+      const pendingReceivers = new Set<string>([basePath.targetId]);
+      for (let index = pathIndex + 1; index < currentPhasePaths.length; index++) {
+        if (removedPathIndexes.has(index)) continue;
+
+        const candidate = currentPhasePaths[index];
+        if (!pendingReceivers.has(candidate.ownerId) || !isBallDependentAction(candidate.actionType)) {
+          continue;
+        }
+
+        removedPathIndexes.add(index);
+        if (isPassLikeAction(candidate.actionType) && candidate.targetId) {
+          pendingReceivers.add(candidate.targetId);
+        }
+      }
+    }
+
+    let nextChainStart = basePath.points.at(-1);
+    for (let index = pathIndex + 1; index < currentPhasePaths.length; index++) {
+      const candidate = currentPhasePaths[index];
+      if (candidate.ownerId !== basePath.ownerId || !arePointsEqual(candidate.points[0], nextChainStart)) {
+        continue;
+      }
+
+      removedPathIndexes.add(index);
+      nextChainStart = candidate.points.at(-1);
+    }
+
+    if (activePathEdit && removedPathIndexes.has(currentPhasePaths.indexOf(activePathEdit.path))) {
       clearPathEditing();
     }
-    currentPhasePaths[pathIndex].fabricObjects.forEach(candidate => fabricCanvas.remove(candidate));
-    const nextPaths = [...currentPhasePaths];
-    nextPaths.splice(pathIndex, 1);
+
+    const nextPaths: PhasePath[] = [];
+    for (let index = 0; index < currentPhasePaths.length; index++) {
+      const path = currentPhasePaths[index];
+      if (removedPathIndexes.has(index)) {
+        path.fabricObjects.forEach(candidate => fabricCanvas.remove(candidate));
+        continue;
+      }
+      nextPaths.push(path);
+    }
+
+    const nextBallCarrierId = isPassLikeAction(basePath.actionType)
+      ? basePath.ownerId
+      : ballCarrierId;
+
     return {
       tokens,
       currentPhasePaths: nextPaths,
-      ballCarrierId,
+      ballCarrierId: nextBallCarrierId,
       ballIndicator,
       erased: true,
     };

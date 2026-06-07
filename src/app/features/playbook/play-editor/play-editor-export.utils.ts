@@ -25,6 +25,18 @@ interface ExportPlayEditorPdfOptions {
   downloadFilename: string;
 }
 
+interface CanvasExportStyleSnapshot {
+  object: FabricObject;
+  fill: FabricObject['fill'];
+  stroke: FabricObject['stroke'];
+  strokeWidth: FabricObject['strokeWidth'];
+  strokeDashArray: FabricObject['strokeDashArray'];
+}
+
+interface CanvasBackgroundSnapshot {
+  color: Canvas['backgroundColor'];
+}
+
 export function exportPlayEditorVideo({
   canvasElement,
   phases,
@@ -81,33 +93,41 @@ export async function exportPlayEditorPdf({
 }: ExportPlayEditorPdfOptions): Promise<void> {
   const { width, height } = courtCanvasSize(courtMode);
   const document = new jsPDF({ orientation: 'landscape', unit: 'px', format: [width, height + 60] });
+  const baseStyleSnapshot = captureAndApplyOutlineStyle(canvas.getObjects());
+  const backgroundSnapshot = applyPdfBackground(canvas);
 
-  for (const [index, phase] of phases.entries()) {
-    if (index > 0) {
-      document.addPage();
+  try {
+    for (const [index, phase] of phases.entries()) {
+      if (index > 0) {
+        document.addPage();
+      }
+
+      syncTokensToPhasePositions(tokens, phase.playerPositions);
+      const temporaryObjects = renderPhasePaths(canvas, phase);
+      captureAndApplyOutlineStyle(temporaryObjects);
+
+      canvas.renderAll();
+      document.addImage(
+        canvas.toDataURL({ multiplier: 1, format: 'jpeg', quality: 0.85 }),
+        'JPEG',
+        0,
+        40,
+        width,
+        height,
+      );
+      document.setFontSize(12);
+      document.text(`${playName} — Phase ${index + 1}`, 20, 22);
+
+      temporaryObjects.forEach(object => canvas.remove(object));
     }
 
-    syncTokensToPhasePositions(tokens, phase.playerPositions);
-    const temporaryObjects = renderPhasePaths(canvas, phase);
-
+    document.save(downloadFilename);
+  } finally {
+    syncTokensToStoredPositions(tokens);
+    restoreCanvasStyles(baseStyleSnapshot);
+    restorePdfBackground(canvas, backgroundSnapshot);
     canvas.renderAll();
-    document.addImage(
-      canvas.toDataURL({ multiplier: 1, format: 'jpeg', quality: 0.85 }),
-      'JPEG',
-      0,
-      40,
-      width,
-      height,
-    );
-    document.setFontSize(12);
-    document.text(`${playName} — Phase ${index + 1}`, 20, 22);
-
-    temporaryObjects.forEach(object => canvas.remove(object));
   }
-
-  syncTokensToStoredPositions(tokens);
-  canvas.renderAll();
-  document.save(downloadFilename);
 }
 
 function renderPhasePaths(canvas: Canvas, phase: Phase): FabricObject[] {
@@ -123,4 +143,72 @@ function renderPhasePaths(canvas: Canvas, phase: Phase): FabricObject[] {
   }
 
   return temporaryObjects;
+}
+
+function captureAndApplyOutlineStyle(objects: FabricObject[]): CanvasExportStyleSnapshot[] {
+  const snapshots: CanvasExportStyleSnapshot[] = [];
+
+  for (const object of flattenExportObjects(objects)) {
+    snapshots.push({
+      object,
+      fill: object.fill,
+      stroke: object.stroke,
+      strokeWidth: object.strokeWidth,
+      strokeDashArray: object.strokeDashArray,
+    });
+
+    if (isTextObject(object)) {
+      object.set({
+        fill: '#000000',
+        stroke: undefined,
+      });
+      continue;
+    }
+
+    object.set({
+      fill: 'transparent',
+      stroke: '#000000',
+      strokeWidth: object.strokeWidth && object.strokeWidth > 0 ? object.strokeWidth : 2,
+    });
+  }
+
+  return snapshots;
+}
+
+function restoreCanvasStyles(snapshots: CanvasExportStyleSnapshot[]): void {
+  for (const snapshot of snapshots) {
+    snapshot.object.set({
+      fill: snapshot.fill,
+      stroke: snapshot.stroke,
+      strokeWidth: snapshot.strokeWidth,
+      strokeDashArray: snapshot.strokeDashArray,
+    });
+  }
+}
+
+function applyPdfBackground(canvas: Canvas): CanvasBackgroundSnapshot {
+  const snapshot: CanvasBackgroundSnapshot = { color: canvas.backgroundColor };
+  canvas.backgroundColor = '#ffffff';
+  return snapshot;
+}
+
+function restorePdfBackground(canvas: Canvas, snapshot: CanvasBackgroundSnapshot): void {
+  canvas.backgroundColor = snapshot.color;
+}
+
+function flattenExportObjects(objects: FabricObject[]): FabricObject[] {
+  const flattened: FabricObject[] = [];
+  for (const object of objects) {
+    flattened.push(object);
+    if ('forEachObject' in object && typeof object.forEachObject === 'function') {
+      object.forEachObject((child: FabricObject) => {
+        flattened.push(...flattenExportObjects([child]));
+      });
+    }
+  }
+  return flattened;
+}
+
+function isTextObject(object: FabricObject): object is FabricObject & { text: string } {
+  return typeof (object as FabricObject & { text?: unknown }).text === 'string';
 }

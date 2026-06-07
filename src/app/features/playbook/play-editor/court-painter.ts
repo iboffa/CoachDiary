@@ -54,6 +54,12 @@ const WHITE  = 'rgba(255,255,255,0.90)';
 const PAINT  = 'rgba(20,55,110,0.45)';
 const ORANGE = '#f97316';
 
+const WOOD_PLANKS = [
+  '#F9E494', '#F5DC86', '#FCEA9E', '#F1D47C', '#F7E08E',
+  '#F3DC84', '#FAE698', '#EFCE7A', '#F7E08C', '#F5DC84',
+];
+const PLANK_H = 10;
+
 const lineOpts = { stroke: WHITE, strokeWidth: 2, selectable: false, evented: false } as const;
 const pathOpts = { stroke: WHITE, strokeWidth: 2, fill: 'transparent', selectable: false, evented: false } as const;
 
@@ -84,14 +90,43 @@ const A = (sx: number, sy: number, ex: number, ey: number, r: number,
   new Path(`M ${sx} ${sy} A ${r} ${r} 0 ${large} ${sweep} ${ex} ${ey}`, opts);
 
 // ─────────────────────────────────────────────────────────────
+//  Hardwood floor background
+//  Uses fat-stroke Line objects so negative world-space coords
+//  (outside the court boundary padding) render correctly.
+// ─────────────────────────────────────────────────────────────
+function buildHardwood(W: number): Line[] {
+  const lines: Line[] = [];
+  const sy = -COURT_OUT_OF_BOUNDS_PADDING;
+  const ey =  H + COURT_OUT_OF_BOUNDS_PADDING;
+  const sx = -COURT_OUT_OF_BOUNDS_PADDING;
+  const ex =  W + COURT_OUT_OF_BOUNDS_PADDING;
+  const count = Math.ceil((ey - sy) / PLANK_H) + 2;
+
+  // Fat lines act as coloured plank bands
+  for (let i = 0; i < count; i++) {
+    const y = sy + i * PLANK_H + PLANK_H / 2;
+    const stroke = WOOD_PLANKS[(i * 3 + Math.floor(i / 7)) % WOOD_PLANKS.length];
+    lines.push(new Line([sx, y, ex, y], { stroke, strokeWidth: PLANK_H + 1, selectable: false, evented: false }));
+  }
+
+  // Thin separator lines between planks
+  for (let i = 1; i < count; i++) {
+    const y = sy + i * PLANK_H;
+    lines.push(new Line([sx, y, ex, y], { stroke: 'rgba(0,0,0,0.14)', strokeWidth: 1, selectable: false, evented: false }));
+  }
+
+  return lines;
+}
+
+// ─────────────────────────────────────────────────────────────
 //  Main entry point
 // ─────────────────────────────────────────────────────────────
 export function drawCourt(canvas: Canvas, mode: CourtMode = 'half'): void {
   const { W } = courtSize(mode);
 
-  (canvas as any).backgroundColor = '#1a5c35';
+  (canvas as any).backgroundColor = '#F7E08C';
 
-  const o: (Line | Path)[] = [];
+  const o: (Line | Path)[] = [...buildHardwood(W)];
 
   // Boundary
   o.push(L(0, 0, W, 0), L(0, H, W, H), L(0, 0, 0, H), L(W, 0, W, H));

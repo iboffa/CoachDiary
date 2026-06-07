@@ -24,6 +24,8 @@ export interface PlayEditorCanvasEventBindings {
   setPendingPassFrom: (playerId: string | null) => void;
   getBallCarrierId: () => string | null;
   setContextMenu: (state: ContextMenuState | null) => void;
+  findPathByObject: (target?: FabricObject) => PhasePath | null;
+  setSelectedPathObject: (target: FabricObject | null) => void;
   isPathEditHandle: (target?: FabricObject) => boolean;
   clearPathEditing: () => void;
   startPath: (x: number, y: number) => void;
@@ -91,6 +93,16 @@ export function bindPlayEditorCanvasEvents(bindings: PlayEditorCanvasEventBindin
         const editablePath = findEditablePath(bindings.getCurrentPhasePaths(), event.target);
         if (editablePath) {
           bindings.beginPathEditing(editablePath);
+          bindings.setSelectedPathObject(null);
+          bindings.setContextMenu(null);
+          return;
+        }
+
+        const selectedPath = bindings.findPathByObject(event.target);
+        if (selectedPath) {
+          bindings.setContextMenu(null);
+          bindings.clearPathEditing();
+          bindings.setSelectedPathObject(event.target ?? null);
           return;
         }
 
@@ -102,6 +114,7 @@ export function bindPlayEditorCanvasEvents(bindings: PlayEditorCanvasEventBindin
         );
         if (token) {
           bindings.clearPathEditing();
+          bindings.setSelectedPathObject(null);
 
           const passFromId = bindings.getPendingPassFrom();
           if (passFromId) {
@@ -127,6 +140,7 @@ export function bindPlayEditorCanvasEvents(bindings: PlayEditorCanvasEventBindin
 
         bindings.setContextMenu(null);
         bindings.clearPathEditing();
+        bindings.setSelectedPathObject(null);
       } else {
         bindings.setContextMenu(null);
       }
@@ -135,6 +149,7 @@ export function bindPlayEditorCanvasEvents(bindings: PlayEditorCanvasEventBindin
       if (distance < 5) {
         bindings.setContextMenu(null);
         bindings.clearPathEditing();
+        bindings.setSelectedPathObject(null);
       }
     }
 

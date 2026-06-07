@@ -1,4 +1,3 @@
-import { TOKEN_RADIUS } from './play-editor.constants';
 import { ActionType, PlayerToken, Point, StoredPath } from './play-editor.models';
 
 export interface SavedTokenPosition {
@@ -65,12 +64,12 @@ export function advanceTokensToPathEndpoints(tokens: PlayerToken[], paths: Store
 
 function applyTokenGroupPosition(token: PlayerToken, position: Point): void {
   token.fabricGroup.set({
-    left: position.x - TOKEN_RADIUS,
-    top: position.y - TOKEN_RADIUS,
+    left: position.x,
+    top: position.y,
   });
   token.fabricGroup.setCoords();
 }
 
 function isBallOnlyAction(action: ActionType): boolean {
-  return action === 'pass' || action === 'shoot';
+  return action === 'pass' || action === 'dribble-handoff' || action === 'shoot';
 }

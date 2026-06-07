@@ -12,6 +12,10 @@ import { isMovementAction } from './play-editor-path.utils';
 const CONTEXT_MENU_NEARBY_DISTANCE = 60;
 const SHADOW_ENDPOINT_EPSILON = 1;
 
+function supportsShadowPlaceholder(path: PhasePath): boolean {
+  return path.actionType !== 'dribble-handoff';
+}
+
 export interface ShadowTokenDraft {
   ownerId: string;
   type: TokenType;
@@ -86,7 +90,12 @@ export function findLatestMovementPaths(paths: PhasePath[]): PhasePath[] {
   const latestByOwner = new Map<string, PhasePath>();
   for (let index = paths.length - 1; index >= 0; index--) {
     const path = paths[index];
-    if (!isMovementAction(path.actionType) || path.points.length < 2 || latestByOwner.has(path.ownerId)) {
+    if (
+      !isMovementAction(path.actionType)
+      || !supportsShadowPlaceholder(path)
+      || path.points.length < 2
+      || latestByOwner.has(path.ownerId)
+    ) {
       continue;
     }
     latestByOwner.set(path.ownerId, path);
@@ -189,7 +198,7 @@ export function getRestoredShadowPosition(
   const path = findLatestMovementPath(paths, ownerId);
   const token = findPlayerToken(tokens, ownerId);
   const end = path?.points.at(-1);
-  if (!path || !token || !end || shouldRemoveShadowPlaceholder(token, end)) {
+  if (!path || !supportsShadowPlaceholder(path) || !token || !end || shouldRemoveShadowPlaceholder(token, end)) {
     return null;
   }
 

@@ -63,6 +63,7 @@ import {
   advanceTokensToPathEndpoints,
   captureTokenPositions,
   restoreSavedTokenPositions,
+  SavedTokenPosition,
   syncTokensToPhasePositions,
   syncTokensToResolvedPositions,
   syncTokensToStoredPositions,
@@ -87,6 +88,13 @@ import {
   syncDraggedShadowPlaceholder as syncFabricDraggedShadowPlaceholder,
 } from './play-editor-fabric-editing.utils';
 
+interface UndoSnapshot {
+  phasePaths: StoredPath[];
+  tokens: Array<{ id: string; type: 'offense' | 'defense'; label: string; position: Point }>;
+  ballCarrierId: string | null;
+  defenseCount: number;
+}
+
 @Component({
   selector: 'app-play-editor',
   imports: [FormsModule, TitleCasePipe],
@@ -94,6 +102,9 @@ import {
   styleUrl: './play-editor.component.scss',
   host: {
     '(document:keydown.escape)': 'onEscape()',
+    '(document:keydown.delete)': 'onDeleteKey()',
+    '(document:keydown.backspace)': 'onDeleteKey()',
+    '(document:keydown.control.z)': 'undo()',
     '(document:pointerdown)': 'onDocumentPointerDown($event)',
   },
 })
@@ -117,6 +128,8 @@ export class PlayEditorComponent implements OnDestroy {
   readonly animProgress  = signal(0);
   readonly showAnimatedLines = signal(true);
   readonly saving        = signal(false);
+  readonly duplicating   = signal(false);
+  readonly savingTemplate = signal(false);
 
   readonly ballCarrierId     = signal<string | null>(null);
   readonly contextMenu       = signal<ContextMenuState | null>(null);
@@ -128,6 +141,9 @@ export class PlayEditorComponent implements OnDestroy {
 
   readonly isPlaying   = computed(() => this.animState() === 'playing');
   readonly canPreview  = computed(() => this.phaseCount() > 0);
+  private readonly undoStackSize = signal(0);
+  readonly canUndo     = computed(() => this.undoStackSize() > 0);
+  readonly pathSelected = signal(false);
 
   readonly categories: Play['category'][] = ['offense', 'defense', 'transition', 'inbound', 'press-break'];
 
@@ -143,6 +159,7 @@ export class PlayEditorComponent implements OnDestroy {
   private pendingDrawStart: Point | null = null;
   private activeOwnerId: string | null = null;
   private activePathEdit: PathEditState | null = null;
+  private selectedPathObject: FabricObject | null = null;
   private mouseDownPoint: Point | null = null;
   private animFrameId: number | null = null;
   private ballIndicator: Circle | null = null;
@@ -150,7 +167,35 @@ export class PlayEditorComponent implements OnDestroy {
   private readonly ANIM_DURATION = 2500;
   private activeAnimResolve: (() => void) | null = null;
 
+  private undoStack: UndoSnapshot[] = [];
+  private editingPhaseIndex: number | null = null;
+  private editingPhaseModified = false;
+  private savedEditingState: {
+    phasePaths: StoredPath[];
+    tokenPositions: SavedTokenPosition[];
+    ballCarrierId: string | null;
+  } | null = null;
+
   get phases(): Phase[] { return this._phases; }
+
+  private readonly teamId: number | null = PlayEditorComponent.parseRouteId(
+    this.route.snapshot.paramMap.get('teamId'));
+  private readonly oppId: number | null = PlayEditorComponent.parseRouteId(
+    this.route.snapshot.paramMap.get('oppId'));
+
+  private static parseRouteId(raw: string | null): number | null {
+    if (!raw) return null;
+    const n = parseInt(raw, 10);
+    return isNaN(n) ? null : n;
+  }
+
+  private get listPath(): (string | number)[] {
+    if (this.oppId !== null && this.teamId !== null) {
+      return ['/teams', this.teamId, 'opponents', this.oppId, 'playbook'];
+    }
+    if (this.teamId !== null) return ['/teams', this.teamId, 'playbook'];
+    return ['/playbook'];
+  }
 
   constructor() {
     const id = this.route.snapshot.paramMap.get('id');
@@ -256,6 +301,10 @@ export class PlayEditorComponent implements OnDestroy {
     this.currentPathCount.set(0);
     this.phaseCount.set(0);
     this.pendingPassFrom.set(null);
+    this.editingPhaseIndex = null;
+    this.editingPhaseModified = false;
+    this.savedEditingState = null;
+    this.clearUndoStack();
   }
 
   private attachCanvasEvents(): void {
@@ -274,6 +323,8 @@ export class PlayEditorComponent implements OnDestroy {
       setPendingPassFrom: playerId => { this.pendingPassFrom.set(playerId); },
       getBallCarrierId: () => this.ballCarrierId(),
       setContextMenu: state => { this.contextMenu.set(state); },
+      findPathByObject: target => this.findPathByObject(target),
+      setSelectedPathObject: target => { this.setSelectedPathObject(target); },
       isPathEditHandle: target => this.isPathEditHandle(target),
       clearPathEditing: () => this.clearPathEditing(),
       startPath: (x, y) => this.startPath(x, y),
@@ -350,12 +401,14 @@ export class PlayEditorComponent implements OnDestroy {
     const circle = new Circle({
       radius: TOKEN_RADIUS,
       fill: isShadow
-        ? (isOff ? 'rgba(30,58,95,0.16)' : 'rgba(45,31,63,0.16)')
+        ? (isOff ? 'rgba(30,64,175,0.35)' : 'rgba(109,40,217,0.35)')
         : (isOff ? '#1e3a5f' : '#2d1f3f'),
-      stroke: isOff ? '#60a5fa' : '#c084fc',
-      strokeWidth: 2,
+      stroke: isShadow
+        ? (isOff ? '#1d4ed8' : '#7c3aed')
+        : (isOff ? '#60a5fa' : '#c084fc'),
+      strokeWidth: isShadow ? 2.5 : 2,
       strokeDashArray: isShadow ? [7, 5] : undefined,
-      opacity: isShadow ? 0.75 : 1,
+      opacity: isShadow ? 0.9 : 1,
       originX: 'center',
       originY: 'center',
     });
@@ -363,16 +416,16 @@ export class PlayEditorComponent implements OnDestroy {
       fontSize: 13,
       fontWeight: 'bold',
       fill: isShadow
-        ? (isOff ? '#93c5fd' : '#d8b4fe')
+        ? '#ffffff'
         : (isOff ? '#60a5fa' : '#c084fc'),
-      opacity: isShadow ? 0.85 : 1,
+      opacity: isShadow ? 0.9 : 1,
       originX: 'center',
       originY: 'center',
       fontFamily: 'Inter, system-ui, sans-serif',
     });
     return new Group([circle, text], {
-      left: x - TOKEN_RADIUS,
-      top: y - TOKEN_RADIUS,
+      left: x,
+      top: y,
       selectable: this.activeTool() === 'select' && !isShadow,
       evented: this.activeTool() === 'select',
       hasControls: false,
@@ -391,8 +444,8 @@ export class PlayEditorComponent implements OnDestroy {
 
   private getGroupCenter(group: Group): Point {
     return {
-      x: (group.left ?? 0) + TOKEN_RADIUS,
-      y: (group.top ?? 0) + TOKEN_RADIUS,
+      x: group.left ?? 0,
+      y: group.top ?? 0,
     };
   }
 
@@ -415,12 +468,18 @@ export class PlayEditorComponent implements OnDestroy {
     this.removeTaggedPathHandles();
 
     this.activePathEdit = null;
+    this.selectedPathObject = null;
+    this.updatePathSelectedState();
     this.syncCanvasInteractivity();
     this.fabricCanvas.renderAll();
   }
 
   private beginPathEditing(path: PhasePath, refreshShadow = true): void {
-    if (!isEditableMovementPath(this.currentPhasePaths, path)) return;
+    if (!isEditableMovementPath(this.currentPhasePaths, path)) {
+      this.clearPathEditing();
+      this.setSelectedPathObject(path.fabricObjects[0] ?? null);
+      return;
+    }
     ensureEditableMovementPoints(path);
 
     if (this.activePathEdit?.path === path) {
@@ -431,20 +490,39 @@ export class PlayEditorComponent implements OnDestroy {
       return;
     }
 
+    this.pushUndoSnapshot();
     this.clearPathEditing();
     const controlHandle = this.createPathControlHandle(path);
   this.removeTaggedPathHandles();
     this.fabricCanvas.add(controlHandle);
     this.activePathEdit = { path, controlHandle };
+    this.selectedPathObject = null;
+    this.updatePathSelectedState();
     controlHandle.setCoords();
     if (refreshShadow) this.refreshShadowTokens();
     this.syncCanvasInteractivity();
     this.fabricCanvas.renderAll();
   }
 
+  private findPathByObject(target?: FabricObject): PhasePath | null {
+    if (!target) return null;
+    return this.currentPhasePaths.find(path => path.fabricObjects.includes(target)) ?? null;
+  }
+
+  private setSelectedPathObject(target: FabricObject | null): void {
+    this.selectedPathObject = target;
+    this.updatePathSelectedState();
+    this.fabricCanvas.renderAll();
+  }
+
+  private updatePathSelectedState(): void {
+    this.pathSelected.set(!!this.activePathEdit || !!this.selectedPathObject);
+  }
+
   private rebuildEditablePath(path: PhasePath): void {
     if (!this.isMovementAction(path.actionType)) return;
     rebuildFabricEditablePath(this.fabricCanvas, path);
+    this.bringTokensToFront();
     this.syncCanvasInteractivity();
   }
 
@@ -458,6 +536,7 @@ export class PlayEditorComponent implements OnDestroy {
       () => this.removeTaggedPathHandles(),
       true,
     );
+    this.markPhaseModified();
   }
 
   private previewActivePathControlEdit(): void {
@@ -513,9 +592,18 @@ export class PlayEditorComponent implements OnDestroy {
   }
 
   addDefensePlayer(): void {
+    if (this.isPlayFinalized()) return;
+    this.pushUndoSnapshot();
     const { W, H } = courtSize(this.courtMode());
     this.defenseCount++;
     this.spawnToken(`defense-${Date.now()}`, 'defense', 'X', Math.round(W * 0.45), Math.round(H / 2));
+  }
+
+  private isPlayFinalized(): boolean {
+    if (this.editingPhaseIndex !== null) return false;
+    if (this.currentPhasePaths.length > 0) return false;
+    const lastPhase = this._phases.at(-1);
+    return !!lastPhase?.paths.some(path => path.actionType === 'shoot');
   }
 
   // ── Ball indicator ────────────────────────────────────────────
@@ -555,6 +643,16 @@ export class PlayEditorComponent implements OnDestroy {
     if (!this.ballIndicator) return;
     this.fabricCanvas.remove(this.ballIndicator);
     this.fabricCanvas.add(this.ballIndicator);
+  }
+
+  private bringTokensToFront(): void {
+    for (const token of this.tokens) {
+      this.fabricCanvas.bringObjectToFront(token.fabricGroup);
+    }
+    for (const shadow of this.shadowTokens) {
+      this.fabricCanvas.bringObjectToFront(shadow.fabricGroup);
+    }
+    this.bringBallIndicatorToFront();
   }
 
   private clearAnimatedPhaseObjects(): void {
@@ -612,7 +710,7 @@ export class PlayEditorComponent implements OnDestroy {
       this.animatedPhaseObjects.push(...this.createAnimatedPathObjects(scheduledPath.path, coverage));
     }
 
-    this.bringBallIndicatorToFront();
+    this.bringTokensToFront();
   }
 
   // ── Context menu ──────────────────────────────────────────────
@@ -620,14 +718,38 @@ export class PlayEditorComponent implements OnDestroy {
   closeContextMenu(): void { this.contextMenu.set(null); }
 
   setBallCarrier(playerId: string): void {
+    if (this.isPlayFinalized()) {
+      this.contextMenu.set(null);
+      return;
+    }
     this.ballCarrierId.set(playerId);
     this.contextMenu.set(null);
     this.updateBallIndicator();
   }
 
+  canRemovePlayerPass(playerId: string): boolean {
+    return this.findLatestPlayerPath(playerId, action => action === 'pass' || action === 'dribble-handoff') !== null;
+  }
+
+  canRemovePlayerShoot(playerId: string): boolean {
+    return this.findLatestPlayerPath(playerId, action => action === 'shoot') !== null;
+  }
+
+  removePlayerPass(playerId: string): void {
+    this.removeLatestPlayerPath(playerId, action => action === 'pass' || action === 'dribble-handoff');
+  }
+
+  removePlayerShoot(playerId: string): void {
+    this.removeLatestPlayerPath(playerId, action => action === 'shoot');
+  }
+
   selectAction(action: ActionType): void {
     const menu = this.contextMenu();
     if (!menu) return;
+    if (this.isPlayFinalized()) {
+      this.contextMenu.set(null);
+      return;
+    }
     const token = findPlayerToken(this.tokens, menu.playerId);
     const anchor = getCurrentAnchorPosition(this.tokens, this.currentPhasePaths, menu.playerId);
     if (!token || !anchor) { this.contextMenu.set(null); return; }
@@ -638,6 +760,7 @@ export class PlayEditorComponent implements OnDestroy {
       this.drawShootArc(token.id, anchor);
       this.ballCarrierId.set(null);
       this.updateBallIndicator();
+      this.nextPhase();
       return;
     }
 
@@ -669,13 +792,36 @@ export class PlayEditorComponent implements OnDestroy {
       style: PATH_STYLES[storedPath.actionType],
       evented: true,
     });
-    this.fabricCanvas.renderAll();
-
+    this.pushUndoSnapshot();
     this.currentPhasePaths.push({ ...storedPath, fabricObjects });
     this.currentPathCount.set(this.currentPhasePaths.length);
+    this.markPhaseModified();
 
     this.ballCarrierId.set(receiverId);
+    this.bringTokensToFront();
     this.updateBallIndicator();
+  }
+
+  private findLatestPlayerPath(
+    playerId: string,
+    predicate: (action: ActionType) => boolean,
+  ): PhasePath | null {
+    for (let index = this.currentPhasePaths.length - 1; index >= 0; index--) {
+      const path = this.currentPhasePaths[index];
+      if (path.ownerId !== playerId || !predicate(path.actionType)) continue;
+      return path;
+    }
+
+    return null;
+  }
+
+  private removeLatestPlayerPath(playerId: string, predicate: (action: ActionType) => boolean): void {
+    const targetPath = this.findLatestPlayerPath(playerId, predicate);
+    this.contextMenu.set(null);
+    if (!targetPath) return;
+    const targetObject = targetPath.fabricObjects[0];
+    if (!targetObject) return;
+    this.eraseObject(targetObject);
   }
 
   private drawShootArc(ownerId: string, from: Point): void {
@@ -687,9 +833,11 @@ export class PlayEditorComponent implements OnDestroy {
       style: PATH_STYLES[storedPath.actionType],
       evented: true,
     });
-    this.fabricCanvas.renderAll();
+    this.pushUndoSnapshot();
     this.currentPhasePaths.push({ ...storedPath, fabricObjects });
     this.currentPathCount.set(this.currentPhasePaths.length);
+    this.markPhaseModified();
+    this.bringTokensToFront();
   }
 
   // ── Path drawing ──────────────────────────────────────────────
@@ -725,6 +873,7 @@ export class PlayEditorComponent implements OnDestroy {
       includeMarker: false,
     });
     this.livePathObj = previewPath as Path;
+    this.bringTokensToFront();
     this.fabricCanvas.renderAll();
   }
 
@@ -757,9 +906,11 @@ export class PlayEditorComponent implements OnDestroy {
       evented: true,
     });
 
-    this.fabricCanvas.renderAll();
+    this.pushUndoSnapshot();
     this.currentPhasePaths.push({ ...storedPath, fabricObjects });
     this.currentPathCount.set(this.currentPhasePaths.length);
+    this.markPhaseModified();
+    this.bringTokensToFront();
     this.refreshShadowTokens();
     this.updateBallIndicator();
     this.setTool('select');
@@ -780,11 +931,15 @@ export class PlayEditorComponent implements OnDestroy {
     });
     if (!result.erased) return;
 
+    this.pushUndoSnapshot();
+    this.selectedPathObject = null;
     this.tokens = result.tokens;
     this.currentPhasePaths = result.currentPhasePaths;
     this.currentPathCount.set(this.currentPhasePaths.length);
+    this.markPhaseModified();
     this.ballCarrierId.set(result.ballCarrierId);
     this.ballIndicator = result.ballIndicator;
+    this.updatePathSelectedState();
     this.refreshShadowTokens();
     this.updateBallIndicator();
     this.fabricCanvas.renderAll();
@@ -792,6 +947,8 @@ export class PlayEditorComponent implements OnDestroy {
 
   clearAllPaths(): void {
     if (this.currentPhasePaths.length === 0) return;
+    this.pushUndoSnapshot();
+    this.markPhaseModified();
     this.clearPathEditing();
     this.currentPhasePaths.forEach(p => p.fabricObjects.forEach(o => this.fabricCanvas.remove(o)));
     this.currentPhasePaths = [];
@@ -807,6 +964,42 @@ export class PlayEditorComponent implements OnDestroy {
     if (this.currentPhasePaths.length === 0) return;
     this.clearPathEditing();
 
+    if (this.editingPhaseIndex !== null && !this.editingPhaseModified) {
+      // No changes made — restore to the pre-edit state and exit editing mode
+      this.currentPhasePaths.forEach(p => p.fabricObjects.forEach(o => this.fabricCanvas.remove(o)));
+      this.currentPhasePaths = [];
+      this.currentPathCount.set(0);
+
+      if (this.savedEditingState) {
+        restoreSavedTokenPositions(this.tokens, this.savedEditingState.tokenPositions);
+        this.ballCarrierId.set(this.savedEditingState.ballCarrierId);
+        for (const path of this.savedEditingState.phasePaths) {
+          this.redrawStoredPath(path);
+        }
+        this.savedEditingState = null;
+      }
+
+      this.editingPhaseIndex = null;
+      this.clearUndoStack();
+      this.currentPhaseIndex.set(this._phases.length);
+
+      this.clearShadowTokens();
+      this.refreshShadowTokens();
+      this.syncCanvasInteractivity();
+      this.updateBallIndicator();
+      this.fabricCanvas.renderAll();
+      return;
+    }
+
+    if (this.editingPhaseIndex !== null) {
+      // Changes were made — drop this phase and everything after it before pushing the new version
+      this._phases = this._phases.slice(0, this.editingPhaseIndex);
+      this.editingPhaseIndex = null;
+      this.editingPhaseModified = false;
+      this.savedEditingState = null;
+    }
+
+    this.clearUndoStack();
     this._phases.push({
       playerPositions: Object.fromEntries(this.tokens.map(t => [t.id, { ...t.position }])),
       ballCarrierId: this.ballCarrierId(),
@@ -820,7 +1013,6 @@ export class PlayEditorComponent implements OnDestroy {
     this.phaseCount.set(this._phases.length);
     this.currentPhaseIndex.set(this._phases.length);
 
-    // Advance tokens to their path endpoints (skip pass & shoot — only the ball moves)
     advanceTokensToPathEndpoints(this.tokens, this.currentPhasePaths);
 
     this.currentPhasePaths.forEach(p => p.fabricObjects.forEach(o => this.fabricCanvas.remove(o)));
@@ -831,6 +1023,122 @@ export class PlayEditorComponent implements OnDestroy {
     this.syncCanvasInteractivity();
     this.updateBallIndicator();
     this.fabricCanvas.renderAll();
+  }
+
+  private pushUndoSnapshot(): void {
+    this.undoStack.push({
+      phasePaths: this.currentPhasePaths.map(p => ({
+        ownerId: p.ownerId,
+        actionType: p.actionType,
+        points: p.points.map(pt => ({ ...pt })),
+        targetId: p.targetId,
+      })),
+      tokens: this.tokens.map(t => ({ id: t.id, type: t.type, label: t.label, position: { ...t.position } })),
+      ballCarrierId: this.ballCarrierId(),
+      defenseCount: this.defenseCount,
+    });
+    if (this.undoStack.length > 50) this.undoStack.shift();
+    this.undoStackSize.set(this.undoStack.length);
+  }
+
+  private clearUndoStack(): void {
+    this.undoStack = [];
+    this.undoStackSize.set(0);
+  }
+
+  undo(): void {
+    if (this.undoStack.length === 0) return;
+    const snapshot = this.undoStack.pop()!;
+    this.undoStackSize.set(this.undoStack.length);
+
+    this.clearPathEditing();
+    this.clearShadowTokens();
+
+    this.currentPhasePaths.forEach(p => p.fabricObjects.forEach(o => this.fabricCanvas.remove(o)));
+    this.currentPhasePaths = [];
+    this.currentPathCount.set(0);
+
+    this.tokens.forEach(t => this.fabricCanvas.remove(t.fabricGroup));
+    this.tokens = [];
+    this.defenseCount = snapshot.defenseCount;
+
+    for (const t of snapshot.tokens) {
+      const group = this.createTokenGroup(t.type, t.label, t.position.x, t.position.y);
+      this.tokens.push({ fabricGroup: group, id: t.id, type: t.type, label: t.label, position: { ...t.position } });
+      this.fabricCanvas.add(group);
+    }
+
+    this.ballCarrierId.set(snapshot.ballCarrierId);
+
+    for (const path of snapshot.phasePaths) {
+      this.redrawStoredPath(path);
+    }
+
+    if (this.editingPhaseIndex !== null) this.editingPhaseModified = true;
+
+    this.refreshShadowTokens();
+    this.updateBallIndicator();
+    this.syncCanvasInteractivity();
+    this.fabricCanvas.renderAll();
+  }
+
+  onDeleteKey(): void {
+    const targetObject = this.activePathEdit?.path.fabricObjects[0] ?? this.selectedPathObject;
+    if (!targetObject) return;
+    this.eraseObject(targetObject);
+  }
+
+  jumpToPhase(index: number): void {
+    if (index >= this._phases.length) return;
+
+    this.clearPathEditing();
+    this.clearShadowTokens();
+
+    // Save the pre-edit state only on first entry into editing mode
+    if (this.editingPhaseIndex === null) {
+      this.savedEditingState = {
+        phasePaths: this.currentPhasePaths.map(p => ({
+          ownerId: p.ownerId,
+          actionType: p.actionType,
+          points: p.points.map(pt => ({ ...pt })),
+          targetId: p.targetId,
+        })),
+        tokenPositions: captureTokenPositions(this.tokens),
+        ballCarrierId: this.ballCarrierId(),
+      };
+    }
+
+    this.currentPhasePaths.forEach(p => p.fabricObjects.forEach(o => this.fabricCanvas.remove(o)));
+    this.currentPhasePaths = [];
+    this.currentPathCount.set(0);
+
+    const phase = this._phases[index];
+
+    for (const token of this.tokens) {
+      const pos = phase.playerPositions[token.id];
+      if (!pos) continue;
+      token.position = { ...pos };
+    }
+    syncTokensToPhasePositions(this.tokens, phase.playerPositions);
+    this.ballCarrierId.set(phase.ballCarrierId);
+
+    for (const path of phase.paths) {
+      this.redrawStoredPath(path);
+    }
+
+    this.editingPhaseIndex = index;
+    this.editingPhaseModified = false;
+    this.clearUndoStack();
+    this.currentPhaseIndex.set(index);
+
+    this.refreshShadowTokens();
+    this.updateBallIndicator();
+    this.syncCanvasInteractivity();
+    this.fabricCanvas.renderAll();
+  }
+
+  private markPhaseModified(): void {
+    if (this.editingPhaseIndex !== null) this.editingPhaseModified = true;
   }
 
   // ── Animation ─────────────────────────────────────────────────
@@ -845,8 +1153,9 @@ export class PlayEditorComponent implements OnDestroy {
     const savedPositions = captureTokenPositions(this.tokens);
     const savedBallCarrier = this.ballCarrierId();
 
-    // Hide current phase paths during preview
+    // Hide current phase paths and shadow tokens during preview
     this.currentPhasePaths.forEach(p => p.fabricObjects.forEach(o => o.set({ visible: false })));
+    this.clearShadowTokens();
 
     // Reset all tokens to phase 0 starting positions
     syncTokensToPhasePositions(this.tokens, this._phases[0].playerPositions);
@@ -878,8 +1187,9 @@ export class PlayEditorComponent implements OnDestroy {
       this.clearAnimatedPhaseObjects();
       this.updateBallIndicator();
 
-      // Restore current phase paths visibility
+      // Restore current phase paths visibility and shadow tokens
       this.currentPhasePaths.forEach(p => p.fabricObjects.forEach(o => o.set({ visible: true })));
+      this.refreshShadowTokens();
       this.fabricCanvas.renderAll();
     }
   }
@@ -1003,13 +1313,76 @@ export class PlayEditorComponent implements OnDestroy {
         state,
         thumbnail: this.fabricCanvas.toDataURL({ multiplier: 1, format: 'jpeg', quality: 0.6 }),
       });
-      const id = await this.playService.save(play);
+      const id = await this.playService.save({
+        ...play,
+        team_id: this.teamId ?? undefined,
+        opponent_id: this.oppId ?? undefined,
+      });
       if (!this.playId()) {
         this.playId.set(id);
-        this.router.navigate(['/playbook', id], { replaceUrl: true });
+        this.router.navigate([...this.listPath, id], { replaceUrl: true });
       }
     } finally {
       this.saving.set(false);
+    }
+  }
+
+  async duplicatePlay(): Promise<void> {
+    if (this.duplicating()) return;
+    this.clearPathEditing();
+    this.duplicating.set(true);
+    try {
+      const state = buildPlayEditorStateSnapshot({
+        tokens: this.tokens,
+        phases: this._phases,
+        ballCarrierId: this.ballCarrierId(),
+        currentPhaseIndex: this.currentPhaseIndex(),
+        currentPhasePaths: this.currentPhasePaths,
+        courtMode: this.courtMode(),
+      });
+      const play = buildPlaySavePayload({
+        playId: null,
+        name: `Copy of ${this.playName()}`,
+        description: this.playDesc(),
+        category: this.playCat(),
+        state,
+        thumbnail: this.fabricCanvas.toDataURL({ multiplier: 1, format: 'jpeg', quality: 0.6 }),
+      });
+      const newId = await this.playService.save({
+        ...play,
+        team_id: this.teamId ?? undefined,
+        opponent_id: this.oppId ?? undefined,
+      });
+      this.router.navigate([...this.listPath, newId], { replaceUrl: false });
+    } finally {
+      this.duplicating.set(false);
+    }
+  }
+
+  async saveAsTemplate(): Promise<void> {
+    if (this.savingTemplate()) return;
+    this.clearPathEditing();
+    this.savingTemplate.set(true);
+    try {
+      const state = buildPlayEditorStateSnapshot({
+        tokens: this.tokens,
+        phases: this._phases,
+        ballCarrierId: this.ballCarrierId(),
+        currentPhaseIndex: this.currentPhaseIndex(),
+        currentPhasePaths: this.currentPhasePaths,
+        courtMode: this.courtMode(),
+      });
+      const play = buildPlaySavePayload({
+        playId: null,
+        name: this.playName(),
+        description: this.playDesc(),
+        category: this.playCat(),
+        state,
+        thumbnail: this.fabricCanvas.toDataURL({ multiplier: 1, format: 'jpeg', quality: 0.6 }),
+      });
+      await this.playService.save({ ...play, is_template: true });
+    } finally {
+      this.savingTemplate.set(false);
     }
   }
 
@@ -1060,6 +1433,8 @@ export class PlayEditorComponent implements OnDestroy {
 
     this.refreshShadowTokens();
     this.updateBallIndicator();
+
+    if (this._phases.length > 0) this.jumpToPhase(0);
   }
 
   private redrawStoredPath(p: StoredPath): void {
@@ -1070,7 +1445,6 @@ export class PlayEditorComponent implements OnDestroy {
       style: PATH_STYLES[p.actionType],
       evented: true,
     });
-    this.fabricCanvas.renderAll();
     this.currentPhasePaths.push({
       ownerId: p.ownerId,
       actionType: p.actionType,
@@ -1079,6 +1453,7 @@ export class PlayEditorComponent implements OnDestroy {
       fabricObjects,
     });
     this.currentPathCount.set(this.currentPhasePaths.length);
+    this.bringTokensToFront();
   }
 
   // ── Export: Video ─────────────────────────────────────────────
@@ -1118,5 +1493,5 @@ export class PlayEditorComponent implements OnDestroy {
     });
   }
 
-  back(): void { this.router.navigate(['/playbook']); }
+  back(): void { this.router.navigate(this.listPath); }
 }

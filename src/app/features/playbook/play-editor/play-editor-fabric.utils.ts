@@ -57,8 +57,8 @@ export function renderActionPathObjects({
     const marker = new Circle({
       radius: shootMarkerRadius,
       fill: style.stroke,
-      left: end.x - shootMarkerRadius,
-      top: end.y - shootMarkerRadius,
+      left: end.x,
+      top: end.y,
       selectable: false,
       evented: false,
     });

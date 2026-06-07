@@ -1,6 +1,5 @@
 import {
   BALL_INDICATOR_OFFSET,
-  BALL_INDICATOR_RADIUS,
   SCREEN_USAGE_THRESHOLD,
 } from './play-editor.constants';
 import { ActionType, Phase, Point, ScheduledPath, StoredPath } from './play-editor.models';
@@ -11,8 +10,12 @@ export interface BallIndicatorState {
   top?: number;
 }
 
+function isPassLikeAction(action: ActionType): boolean {
+  return action === 'pass' || action === 'dribble-handoff';
+}
+
 export function isMovementAction(action: ActionType): boolean {
-  return action !== 'pass' && action !== 'shoot';
+  return !isPassLikeAction(action) && action !== 'shoot';
 }
 
 export function buildLinePath(points: Point[]): string {
@@ -54,7 +57,11 @@ export function buildPathData(action: ActionType, points: Point[]): string {
   if (points.length === 0) return '';
   if (points.length === 1) return `M ${points[0].x} ${points[0].y}`;
 
-  if (action === 'pass') {
+  if (action === 'dribble') {
+    return buildDribbleSinusoidPath(points);
+  }
+
+  if (isPassLikeAction(action)) {
     const end = points[points.length - 1];
     return `M ${points[0].x} ${points[0].y} L ${end.x} ${end.y}`;
   }
@@ -71,13 +78,57 @@ export function buildPathData(action: ActionType, points: Point[]): string {
   return buildSmoothPath(points);
 }
 
+function buildDribbleSinusoidPath(points: Point[]): string {
+  const totalLength = measurePathLength('dribble', points);
+  if (totalLength < 2) return buildLinePath(points);
+
+  const AMPLITUDE = 6;
+  const WAVELENGTH = 26;
+  const steps = Math.max(60, Math.ceil(totalLength / 2));
+
+  const resultPoints: Point[] = [];
+  let arcLen = 0;
+  let prev = interpolatePointOnPath('dribble', points, 0);
+
+  for (let i = 0; i <= steps; i++) {
+    const t = i / steps;
+    const cur = interpolatePointOnPath('dribble', points, t);
+
+    if (i > 0) {
+      arcLen += Math.hypot(cur.x - prev.x, cur.y - prev.y);
+    }
+
+    const dt = 1 / steps;
+    const p0 = interpolatePointOnPath('dribble', points, Math.max(0, t - dt));
+    const p1 = interpolatePointOnPath('dribble', points, Math.min(1, t + dt));
+    const dx = p1.x - p0.x;
+    const dy = p1.y - p0.y;
+    const len = Math.hypot(dx, dy);
+
+    const nx = len > 1e-6 ? -dy / len : 0;
+    const ny = len > 1e-6 ? dx / len : 0;
+
+    // Taper amplitude to zero over the last TAPER_LENGTH pixels so the path
+    // ends as a straight segment that sits cleanly under the arrowhead.
+    const TAPER_LENGTH = 16;
+    const remaining = totalLength - arcLen;
+    const taper = remaining < TAPER_LENGTH ? remaining / TAPER_LENGTH : 1;
+    const offset = AMPLITUDE * taper * Math.sin((arcLen / WAVELENGTH) * 2 * Math.PI);
+
+    resultPoints.push({ x: cur.x + nx * offset, y: cur.y + ny * offset });
+    prev = cur;
+  }
+
+  return buildLinePath(resultPoints);
+}
+
 export function buildPhasePathSchedule(phase: Phase): ScheduledPath[] {
   if (phase.paths.length === 0) return [];
 
   const durations = phase.paths.map(path => Math.max(measurePathLength(path.actionType, path.points), 1));
   const dependencies = phase.paths.map(() => new Set<number>());
   const resolvedTargets = phase.paths.map((path, index) =>
-    path.actionType === 'pass' ? resolvePassTargetId(phase, phase.paths, path, index) : null,
+    isPassLikeAction(path.actionType) ? resolvePassTargetId(phase, phase.paths, path, index) : null,
   );
 
   const lastPathIndexByOwner = new Map<string, number>();
@@ -90,7 +141,7 @@ export function buildPhasePathSchedule(phase: Phase): ScheduledPath[] {
     }
     lastPathIndexByOwner.set(path.ownerId, index);
 
-    if (path.actionType !== 'pass') continue;
+    if (!isPassLikeAction(path.actionType)) continue;
 
     const targetId = resolvedTargets[index];
     if (!targetId) continue;
@@ -172,7 +223,7 @@ export function getRemainingPathPoints(
   if (clampedCoverage >= 1 || points.length < 2) return null;
   if (clampedCoverage <= 0) return points.map(point => ({ ...point }));
 
-  if (points.length === 2 || action === 'pass') {
+  if (points.length === 2 || isPassLikeAction(action)) {
     return [interpolatePointOnPath(action, points, clampedCoverage), points[points.length - 1]];
   }
 
@@ -238,7 +289,7 @@ export function getBallIndicatorState(
 ): BallIndicatorState {
   const clampedTime = clamp01(time);
   const ballActions = scheduledPaths.filter(
-    scheduledPath => scheduledPath.path.actionType === 'pass' || scheduledPath.path.actionType === 'shoot',
+    scheduledPath => isPassLikeAction(scheduledPath.path.actionType) || scheduledPath.path.actionType === 'shoot',
   );
   const activeAction = ballActions.find(
     scheduledPath => clampedTime >= scheduledPath.startTime && clampedTime < scheduledPath.endTime,
@@ -247,7 +298,7 @@ export function getBallIndicatorState(
   if (activeAction) {
     const localTime = getScheduledPathCoverage(activeAction, clampedTime);
 
-    if (activeAction.path.actionType === 'pass' && activeAction.path.points.length >= 2) {
+    if (isPassLikeAction(activeAction.path.actionType) && activeAction.path.points.length >= 2) {
       const from = activeAction.path.points[0];
       const to = activeAction.path.points[1];
       return {
@@ -271,8 +322,8 @@ export function getBallIndicatorState(
         localTime * localTime * to.y;
 
       return {
-        left: ballX - BALL_INDICATOR_RADIUS,
-        top: ballY - BALL_INDICATOR_RADIUS,
+        left: ballX,
+        top: ballY,
         visible: true,
       };
     }
@@ -284,8 +335,8 @@ export function getBallIndicatorState(
   if (completedShoot && completedShoot.path.points.length >= 3) {
     const end = completedShoot.path.points[completedShoot.path.points.length - 1];
     return {
-      left: end.x - BALL_INDICATOR_RADIUS,
-      top: end.y - BALL_INDICATOR_RADIUS,
+      left: end.x,
+      top: end.y,
       visible: true,
     };
   }
@@ -293,7 +344,7 @@ export function getBallIndicatorState(
   let carrierId = getPhaseStartBallCarrierId(phase, scheduledPaths);
   for (const action of ballActions) {
     if (action.endTime > clampedTime) break;
-    if (action.path.actionType === 'pass') {
+    if (isPassLikeAction(action.path.actionType)) {
       carrierId = action.targetId;
       continue;
     }
@@ -312,7 +363,7 @@ export function getBallIndicatorState(
 export function measurePathLength(action: ActionType, points: Point[]): number {
   if (points.length < 2) return 0;
 
-  if (points.length === 3 && action !== 'pass') {
+  if (points.length === 3 && !isPassLikeAction(action)) {
     let total = 0;
     let previousPoint = interpolateQuadratic(points[0], points[1], points[2], 0);
     for (let step = 1; step <= 12; step++) {
@@ -335,7 +386,7 @@ export function interpolatePointOnPath(action: ActionType, points: Point[], time
   const clampedTime = clamp01(time);
   if (points.length < 2) return points[0] ?? { x: 0, y: 0 };
 
-  if (points.length === 3 && action !== 'pass') {
+  if (points.length === 3 && !isPassLikeAction(action)) {
     return interpolateQuadratic(points[0], points[1], points[2], clampedTime);
   }
 
@@ -500,7 +551,7 @@ function lerpPoint(start: Point, end: Point, time: number): Point {
 
 function getPhaseStartBallCarrierId(phase: Phase, scheduledPaths: ScheduledPath[]): string | null {
   const firstBallAction = scheduledPaths.find(
-    scheduledPath => scheduledPath.path.actionType === 'pass' || scheduledPath.path.actionType === 'shoot',
+    scheduledPath => isPassLikeAction(scheduledPath.path.actionType) || scheduledPath.path.actionType === 'shoot',
   );
   return firstBallAction?.path.ownerId ?? phase.ballCarrierId;
 }
