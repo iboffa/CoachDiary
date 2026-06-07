@@ -1,0 +1,153 @@
+.teams-page {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 28px 32px 20px;
+  border-bottom: 1px solid #2a2f3e;
+
+  &__title {
+    h1 {
+      margin: 0 0 4px;
+      font-size: 22px;
+      font-weight: 700;
+      color: #e8eaf0;
+    }
+    p {
+      margin: 0;
+      font-size: 13px;
+      color: #8892a4;
+    }
+  }
+}
+
+.teams-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 14px;
+  padding: 24px 32px;
+  align-content: start;
+}
+
+.team-card {
+  background: #161b27;
+  border: 1px solid #2a2f3e;
+  border-radius: 12px;
+  padding: 20px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  position: relative;
+  transition: border-color 0.15s, transform 0.12s;
+
+  &:hover {
+    border-color: #2563eb60;
+    transform: translateY(-1px);
+
+    .team-card__actions { opacity: 1; }
+    .team-card__arrow { opacity: 1; }
+  }
+
+  &__icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+    background: #1e2a45;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+
+    svg {
+      width: 24px;
+      height: 24px;
+      color: #f97316;
+    }
+  }
+
+  &__body {
+    flex: 1;
+    min-width: 0;
+  }
+
+  &__name {
+    font-size: 15px;
+    font-weight: 600;
+    color: #e8eaf0;
+    margin-bottom: 2px;
+  }
+
+  &__desc {
+    font-size: 12px;
+    color: #8892a4;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &__actions {
+    position: absolute;
+    top: 10px;
+    right: 36px;
+    display: flex;
+    gap: 4px;
+    opacity: 0;
+    transition: opacity 0.15s;
+  }
+
+  &__arrow {
+    color: #4a5568;
+    opacity: 0;
+    transition: opacity 0.15s;
+    flex-shrink: 0;
+    svg { width: 16px; height: 16px; }
+  }
+}
+
+.card-action-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: none;
+  background: #1e2536cc;
+  color: #8892a4;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+  backdrop-filter: blur(4px);
+
+  svg { width: 14px; height: 14px; }
+
+  &--danger:hover { background: #dc2626; color: #fff; }
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  gap: 16px;
+  color: #8892a4;
+  padding: 60px 20px;
+
+  svg {
+    width: 56px;
+    height: 56px;
+    opacity: 0.4;
+  }
+
+  p {
+    margin: 0;
+    font-size: 14px;
+    text-align: center;
+  }
+}
