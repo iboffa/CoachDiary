@@ -52,9 +52,96 @@ html, body {
     &:hover { background: #2d1515; }
   }
 
+  &--accent {
+    background: #7c3aed;
+    color: #fff;
+    &:hover { background: #6d28d9; }
+  }
+
   &:disabled { opacity: 0.45; cursor: default; }
 
   svg { width: 15px; height: 15px; }
+}
+
+// Form control alias (same as base input/select styles)
+.form-control {
+  background: #1e2536;
+  border: 1px solid #2a2f3e;
+  border-radius: 7px;
+  color: #e8eaf0;
+  font-size: 13px;
+  padding: 8px 12px;
+  outline: none;
+  transition: border-color 0.15s;
+  width: 100%;
+
+  &:focus { border-color: #2563eb; }
+  &::placeholder { color: #4a5568; }
+}
+
+.optional {
+  color: #4a5568;
+  font-weight: 400;
+}
+
+// Modal
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  backdrop-filter: blur(2px);
+}
+
+.modal {
+  background: #161b27;
+  border: 1px solid #2a2f3e;
+  border-radius: 12px;
+  width: 420px;
+  max-width: calc(100vw - 32px);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5);
+
+  &__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 20px 14px;
+    border-bottom: 1px solid #2a2f3e;
+
+    h2 { font-size: 16px; font-weight: 600; color: #e8eaf0; margin: 0; }
+  }
+
+  &__close {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border: none;
+    background: transparent;
+    color: #8892a4;
+    cursor: pointer;
+    border-radius: 6px;
+    transition: background 0.12s, color 0.12s;
+
+    svg { width: 16px; height: 16px; }
+    &:hover { background: #1e2536; color: #c8d0e0; }
+  }
+
+  &__body {
+    padding: 18px 20px;
+  }
+
+  &__footer {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+    padding: 12px 20px 18px;
+    border-top: 1px solid #2a2f3e;
+  }
 }
 
 .page-header {

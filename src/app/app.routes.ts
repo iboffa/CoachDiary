@@ -1,25 +1,55 @@
 import { Routes } from '@angular/router';
+import { TeamsComponent } from './features/teams/teams.component';
 
 export const routes: Routes = [
-  { path: '', redirectTo: 'playbook', pathMatch: 'full' },
+  { path: '', redirectTo: 'teams', pathMatch: 'full' },
+
+  // Teams main page
+  { path: 'teams', component: TeamsComponent },
+
+  // Team — playbook
   {
-    path: 'playbook',
-    loadChildren: () =>
-      import('./features/playbook/playbook.routes').then(m => m.PLAYBOOK_ROUTES),
+    path: 'teams/:teamId/playbook',
+    loadComponent: () =>
+      import('./features/playbook/play-list/play-list.component').then(m => m.PlayListComponent),
   },
   {
-    path: 'players',
-    loadChildren: () =>
-      import('./features/players/players.routes').then(m => m.PLAYERS_ROUTES),
+    path: 'teams/:teamId/playbook/:id',
+    loadComponent: () =>
+      import('./features/playbook/play-editor/play-editor.component').then(m => m.PlayEditorComponent),
+  },
+
+  // Team — roster
+  {
+    path: 'teams/:teamId/roster',
+    loadComponent: () =>
+      import('./features/players/players.component').then(m => m.PlayersComponent),
+  },
+
+  // Team — opponents
+  {
+    path: 'teams/:teamId/opponents',
+    loadComponent: () =>
+      import('./features/opponents/opponent-list/opponent-list.component').then(m => m.OpponentListComponent),
   },
   {
-    path: 'training',
-    loadChildren: () =>
-      import('./features/training/training.routes').then(m => m.TRAINING_ROUTES),
+    path: 'teams/:teamId/opponents/:oppId',
+    loadComponent: () =>
+      import('./features/opponents/opponent-detail/opponent-detail.component').then(m => m.OpponentDetailComponent),
+  },
+
+  // Opponent — playbook
+  {
+    path: 'teams/:teamId/opponents/:oppId/playbook',
+    loadComponent: () =>
+      import('./features/playbook/play-list/play-list.component').then(m => m.PlayListComponent),
   },
   {
-    path: 'season',
-    loadChildren: () =>
-      import('./features/season/season.routes').then(m => m.SEASON_ROUTES),
+    path: 'teams/:teamId/opponents/:oppId/playbook/:id',
+    loadComponent: () =>
+      import('./features/playbook/play-editor/play-editor.component').then(m => m.PlayEditorComponent),
   },
+
+  // Catch-all fallback
+  { path: '**', redirectTo: 'teams' },
 ];
