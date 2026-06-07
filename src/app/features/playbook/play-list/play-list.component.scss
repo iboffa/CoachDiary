@@ -63,15 +63,67 @@
     text-overflow: ellipsis;
   }
 
-  &__delete {
+  &__actions {
     position: absolute;
-    top: 8px;
-    right: 8px;
+    top: 6px;
+    right: 6px;
+    display: flex;
+    gap: 4px;
     opacity: 0;
-    padding: 3px 7px;
-    font-size: 11px;
     transition: opacity 0.15s;
   }
 
-  &:hover &__delete { opacity: 1; }
+  &:hover &__actions { opacity: 1; }
+
+  &--template {
+    border-color: #7c3aed40;
+    cursor: default;
+
+    &:hover { border-color: #7c3aed80; transform: translateY(-1px); }
+  }
+
+  &__template-actions {
+    display: flex;
+    gap: 6px;
+    padding: 8px 12px 12px;
+  }
+}
+
+.card-action-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: none;
+  background: #1e2536cc;
+  color: #8892a4;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+  backdrop-filter: blur(4px);
+
+  svg { width: 14px; height: 14px; }
+
+  &:hover { background: #2563eb; color: #fff; }
+  &--danger:hover { background: #dc2626; color: #fff; }
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #8892a4;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin: 24px 0 10px;
+
+  svg { width: 16px; height: 16px; }
+}
+
+.btn--sm {
+  padding: 4px 10px;
+  font-size: 12px;
 }

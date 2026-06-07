@@ -1,6 +1,6 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { PlayService } from '../../../core/services/play.service';
 import { PlaySummary } from '../../../shared/models/models';
 
@@ -12,9 +12,36 @@ import { PlaySummary } from '../../../shared/models/models';
 })
 export class PlayListComponent {
   private readonly playService = inject(PlayService);
+  private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
 
+  private readonly teamId = PlayListComponent.parseId(this.route.snapshot.paramMap.get('teamId'));
+  private readonly oppId  = PlayListComponent.parseId(this.route.snapshot.paramMap.get('oppId'));
+
+  private static parseId(raw: string | null): number | null {
+    if (!raw) return null;
+    const n = parseInt(raw, 10);
+    return isNaN(n) ? null : n;
+  }
+
+  private get filter() {
+    if (this.oppId !== null) return { opponentId: this.oppId };
+    if (this.teamId !== null) return { teamId: this.teamId };
+    return undefined;
+  }
+
+  private get editorBasePath(): (string | number)[] {
+    if (this.oppId !== null && this.teamId !== null) {
+      return ['/teams', this.teamId, 'opponents', this.oppId, 'playbook'];
+    }
+    if (this.teamId !== null) {
+      return ['/teams', this.teamId, 'playbook'];
+    }
+    return ['/playbook'];
+  }
+
   readonly plays = signal<PlaySummary[]>([]);
+  readonly templates = signal<PlaySummary[]>([]);
   readonly isEmpty = computed(() => this.plays().length === 0);
 
   constructor() {
@@ -22,16 +49,56 @@ export class PlayListComponent {
   }
 
   private async load(): Promise<void> {
-    this.plays.set(await this.playService.list());
+    const [plays, templates] = await Promise.all([
+      this.playService.list(this.filter),
+      this.playService.listTemplates(this.filter),
+    ]);
+    this.plays.set(plays);
+    this.templates.set(templates);
   }
 
   openEditor(id?: number): void {
-    this.router.navigate(['/playbook', id ?? 'new']);
+    this.router.navigate([...this.editorBasePath, id ?? 'new']);
+  }
+
+  async duplicatePlay(id: number, event: MouseEvent): Promise<void> {
+    event.stopPropagation();
+    const play = await this.playService.get(id);
+    if (!play) return;
+    const { id: _id, created_at: _ca, updated_at: _ua, ...rest } = play;
+    const newId = await this.playService.save({ ...rest, name: `Copy of ${play.name}`, is_template: false });
+    this.router.navigate([...this.editorBasePath, newId]);
+  }
+
+  async savePlayAsTemplate(id: number, event: MouseEvent): Promise<void> {
+    event.stopPropagation();
+    const play = await this.playService.get(id);
+    if (!play) return;
+    const { id: _id, created_at: _ca, updated_at: _ua, ...rest } = play;
+    await this.playService.save({ ...rest, is_template: true });
+    await this.load();
   }
 
   async deletePlay(id: number, event: MouseEvent): Promise<void> {
     event.stopPropagation();
     if (confirm('Delete this play?')) {
+      await this.playService.delete(id);
+      await this.load();
+    }
+  }
+
+  async useTemplate(templateId: number, event: MouseEvent): Promise<void> {
+    event.stopPropagation();
+    const template = await this.playService.get(templateId);
+    if (!template) return;
+    const { id: _id, created_at: _ca, updated_at: _ua, is_template: _it, ...rest } = template;
+    const newId = await this.playService.save({ ...rest, is_template: false });
+    this.router.navigate([...this.editorBasePath, newId]);
+  }
+
+  async deleteTemplate(id: number, event: MouseEvent): Promise<void> {
+    event.stopPropagation();
+    if (confirm('Delete this template?')) {
       await this.playService.delete(id);
       await this.load();
     }
