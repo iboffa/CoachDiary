@@ -153,13 +153,29 @@
 
   <!-- Bottom: preview / animation bar -->
   <footer class="anim-bar">
-    <button class="anim-btn" (click)="stopAnimation()" [disabled]="animState() === 'idle'" title="Stop">
+    <button class="anim-btn" (click)="stopAnimation()" [disabled]="!isAnimating()" title="Stop">
       <svg viewBox="0 0 24 24" fill="currentColor"><rect x="5" y="5" width="14" height="14" rx="1"/></svg>
     </button>
 
-    <button class="anim-btn play" (click)="previewPlay()" [disabled]="!canPreview() || isPlaying()" title="Preview full play">
-      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 4l14 8-14 8z"/></svg>
-    </button>
+    @if (isAnimating()) {
+      <button class="anim-btn" (click)="rollbackPhase()" title="Step back">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6 8.5 6V6z"/></svg>
+      </button>
+    }
+
+    @if (!isAnimating()) {
+      <button class="anim-btn play" (click)="previewPlay()" [disabled]="!canPreview()" title="Preview full play">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 4l14 8-14 8z"/></svg>
+      </button>
+    } @else {
+      <button class="anim-btn play" (click)="togglePause()" title="{{ isPaused() ? 'Resume' : 'Pause' }}">
+        @if (isPaused()) {
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 4l14 8-14 8z"/></svg>
+        } @else {
+          <svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+        }
+      </button>
+    }
 
     <div class="anim-progress">
       <div class="anim-progress__bar" [style.width.%]="animProgress() * 100"></div>
