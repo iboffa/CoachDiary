@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { DbService } from './db.service';
-import { SavedDrill, TrainingSession } from '../../shared/models/models';
+import { DrillCategory, SavedDrill, TrainingSession } from '../../shared/models/models';
 
 @Injectable({ providedIn: 'root' })
 export class TrainingSessionService {
@@ -37,4 +37,8 @@ export class TrainingSessionService {
   deleteSavedDrill(id: number): Promise<void> {
     return this.db.deleteSavedDrill(id);
   }
+
+  listDrillCategories(): Promise<DrillCategory[]> { return this.db.listDrillCategories(); }
+  saveDrillCategory(cat: DrillCategory): Promise<number> { return this.db.saveDrillCategory(cat); }
+  deleteDrillCategory(id: number): Promise<void> { return this.db.deleteDrillCategory(id); }
 }

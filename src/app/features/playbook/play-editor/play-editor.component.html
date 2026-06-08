@@ -9,11 +9,14 @@
 
     <div class="play-meta">
       <input class="play-name-input" [ngModel]="playName()" (ngModelChange)="playName.set($event)" placeholder="Play name"/>
-      <select class="category-select" [ngModel]="playCat()" (ngModelChange)="playCat.set($event)">
-        @for (cat of categories; track cat) {
-          <option [value]="cat">{{ cat | titlecase }}</option>
+      <select class="category-select" [ngModel]="playCat()?.toString() ?? ''" (change)="setCategoryId($any($event.target).value)">
+        <option value="">— No category —</option>
+        @for (cat of categories(); track cat.id) {
+          <option [value]="cat.id!.toString()">{{ cat.name }}</option>
         }
       </select>
+      <input class="category-new-input" [(ngModel)]="newCategoryName" placeholder="New category…" (keydown.enter)="createCategory()"/>
+      <button class="btn btn--ghost btn--sm" (click)="createCategory()" [disabled]="!newCategoryName.trim()">+</button>
     </div>
 
     <div class="court-toggle">

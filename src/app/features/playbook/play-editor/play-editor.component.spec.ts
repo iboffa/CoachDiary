@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { provideRouter, ActivatedRoute } from '@angular/router';
+import { provideRouter, ActivatedRoute, Router } from '@angular/router';
 import { PlayEditorComponent } from './play-editor.component';
 import { COURT_OUT_OF_BOUNDS_PADDING, courtCanvasSize } from './court-painter';
 import { PlayService } from '../../../core/services/play.service';
@@ -36,7 +36,7 @@ describe('PlayEditorComponent - Pick and Roll & Pass/Shoot Test', () => {
     const fixture = TestBed.createComponent(PlayEditorComponent);
     const component = fixture.componentInstance;
     expect(component).toBeTruthy();
-
+    fixture.detectChanges();
     await fixture.whenStable();
 
     const tokens = (component as any).tokens;
@@ -106,7 +106,7 @@ describe('PlayEditorComponent - Pick and Roll & Pass/Shoot Test', () => {
   it('should keep default player tokens interactive for initial repositioning', async () => {
     const fixture = TestBed.createComponent(PlayEditorComponent);
     const component = fixture.componentInstance;
-
+    fixture.detectChanges();
     await fixture.whenStable();
 
     const tokens = (component as any).tokens;
@@ -121,7 +121,7 @@ describe('PlayEditorComponent - Pick and Roll & Pass/Shoot Test', () => {
   it('should add out-of-bounds canvas space for inbound play setup', async () => {
     const fixture = TestBed.createComponent(PlayEditorComponent);
     const component = fixture.componentInstance;
-
+    fixture.detectChanges();
     await fixture.whenStable();
 
     const fabricCanvas = (component as any).fabricCanvas;
@@ -136,7 +136,7 @@ describe('PlayEditorComponent - Pick and Roll & Pass/Shoot Test', () => {
   it('should automatically order screen use, dribble, pass, cut, and received shot timing', async () => {
     const fixture = TestBed.createComponent(PlayEditorComponent);
     const component = fixture.componentInstance;
-
+    fixture.detectChanges();
     await fixture.whenStable();
 
     const tokens = (component as any).tokens;
@@ -179,7 +179,7 @@ describe('PlayEditorComponent - Pick and Roll & Pass/Shoot Test', () => {
   it('should make the screener wait for the screen usage before cutting', async () => {
     const fixture = TestBed.createComponent(PlayEditorComponent);
     const component = fixture.componentInstance;
-
+    fixture.detectChanges();
     await fixture.whenStable();
 
     const tokens = (component as any).tokens;
@@ -214,7 +214,7 @@ describe('PlayEditorComponent - Pick and Roll & Pass/Shoot Test', () => {
   it('should animate a received shot only after the pass window closes', async () => {
     const fixture = TestBed.createComponent(PlayEditorComponent);
     const component = fixture.componentInstance;
-
+    fixture.detectChanges();
     await fixture.whenStable();
 
     const tokens = (component as any).tokens;
@@ -249,7 +249,7 @@ describe('PlayEditorComponent - Pick and Roll & Pass/Shoot Test', () => {
     const fixture = TestBed.createComponent(PlayEditorComponent);
     const component = fixture.componentInstance;
     expect(component).toBeTruthy();
-
+    fixture.detectChanges();
     await fixture.whenStable();
 
     const tokens = (component as any).tokens;
@@ -312,7 +312,7 @@ describe('PlayEditorComponent - Pick and Roll & Pass/Shoot Test', () => {
   it('should recreate a visible ball indicator for preview animation when the editor currently has none', async () => {
     const fixture = TestBed.createComponent(PlayEditorComponent);
     const component = fixture.componentInstance;
-
+    fixture.detectChanges();
     await fixture.whenStable();
 
     const tokens = (component as any).tokens;
@@ -357,7 +357,7 @@ describe('PlayEditorComponent - Pick and Roll & Pass/Shoot Test', () => {
   it('should create a shadow endpoint and chain the next movement from it', async () => {
     const fixture = TestBed.createComponent(PlayEditorComponent);
     const component = fixture.componentInstance;
-
+    fixture.detectChanges();
     await fixture.whenStable();
 
     const tokens = (component as any).tokens;
@@ -422,7 +422,7 @@ describe('PlayEditorComponent - Pick and Roll & Pass/Shoot Test', () => {
   it('should remove chained shadow arrows when deleting the base arrow', async () => {
     const fixture = TestBed.createComponent(PlayEditorComponent);
     const component = fixture.componentInstance;
-
+    fixture.detectChanges();
     await fixture.whenStable();
 
     const pg = (component as any).tokens.find((t: any) => t.id === 'offense-1');
@@ -470,7 +470,7 @@ describe('PlayEditorComponent - Pick and Roll & Pass/Shoot Test', () => {
   it('should show a spline handle for screen paths while keeping the screen bar non-editable', async () => {
     const fixture = TestBed.createComponent(PlayEditorComponent);
     const component = fixture.componentInstance;
-
+    fixture.detectChanges();
     await fixture.whenStable();
 
     const screener = (component as any).tokens.find((t: any) => t.id === 'offense-2');
@@ -503,7 +503,7 @@ describe('PlayEditorComponent - Pick and Roll & Pass/Shoot Test', () => {
   it('should toggle shrinking animation lines during playback', async () => {
     const fixture = TestBed.createComponent(PlayEditorComponent);
     const component = fixture.componentInstance;
-
+    fixture.detectChanges();
     await fixture.whenStable();
 
     const pg = (component as any).tokens.find((t: any) => t.id === 'offense-1');
@@ -545,7 +545,7 @@ describe('PlayEditorComponent - Pick and Roll & Pass/Shoot Test', () => {
   it('should edit the latest movement spline through its control handle and shadow endpoint', async () => {
     const fixture = TestBed.createComponent(PlayEditorComponent);
     const component = fixture.componentInstance;
-
+    fixture.detectChanges();
     await fixture.whenStable();
 
     const pg = (component as any).tokens.find((t: any) => t.id === 'offense-1');
@@ -612,7 +612,7 @@ describe('PlayEditorComponent - Pick and Roll & Pass/Shoot Test', () => {
   it('should show simultaneous latest shadows and clear all shadows on next phase', async () => {
     const fixture = TestBed.createComponent(PlayEditorComponent);
     const component = fixture.componentInstance;
-
+    fixture.detectChanges();
     await fixture.whenStable();
 
     const tokens = (component as any).tokens;
@@ -671,7 +671,7 @@ describe('PlayEditorComponent - Pick and Roll & Pass/Shoot Test', () => {
   it('should remove the spline handle when clicking a non-editable element', async () => {
     const fixture = TestBed.createComponent(PlayEditorComponent);
     const component = fixture.componentInstance;
-
+    fixture.detectChanges();
     await fixture.whenStable();
 
     const pg = (component as any).tokens.find((t: any) => t.id === 'offense-1');
@@ -711,7 +711,7 @@ describe('PlayEditorComponent - Pick and Roll & Pass/Shoot Test', () => {
   it('should remove the spline handle when clicking a shadow and only reopen on arrow click', async () => {
     const fixture = TestBed.createComponent(PlayEditorComponent);
     const component = fixture.componentInstance;
-
+    fixture.detectChanges();
     await fixture.whenStable();
 
     const pg = (component as any).tokens.find((t: any) => t.id === 'offense-1');
@@ -757,7 +757,7 @@ describe('PlayEditorComponent - Pick and Roll & Pass/Shoot Test', () => {
   it('should remove the spline handle when clicking outside the canvas area', async () => {
     const fixture = TestBed.createComponent(PlayEditorComponent);
     const component = fixture.componentInstance;
-
+    fixture.detectChanges();
     await fixture.whenStable();
 
     const pg = (component as any).tokens.find((t: any) => t.id === 'offense-1');
@@ -792,7 +792,7 @@ describe('PlayEditorComponent - Pick and Roll & Pass/Shoot Test', () => {
   it('should remove the spline handle when clicking empty court space', async () => {
     const fixture = TestBed.createComponent(PlayEditorComponent);
     const component = fixture.componentInstance;
-
+    fixture.detectChanges();
     await fixture.whenStable();
 
     const pg = (component as any).tokens.find((t: any) => t.id === 'offense-1');
@@ -827,7 +827,7 @@ describe('PlayEditorComponent - Pick and Roll & Pass/Shoot Test', () => {
   it('should keep short dribble-handoff paths so the ball handler can move in tight space', async () => {
     const fixture = TestBed.createComponent(PlayEditorComponent);
     const component = fixture.componentInstance;
-
+    fixture.detectChanges();
     await fixture.whenStable();
 
     const ballHandler = (component as any).tokens.find((t: any) => t.id === 'offense-1');
@@ -852,5 +852,109 @@ describe('PlayEditorComponent - Pick and Roll & Pass/Shoot Test', () => {
     expect(handoffPath.actionType).toBe('dribble-handoff');
     expect(handoffPath.ownerId).toBe('offense-1');
     expect((component as any).shadowTokens).toHaveLength(0);
+  });
+});
+
+describe('PlayEditorComponent — category management', () => {
+  let component: PlayEditorComponent;
+  let service: any;
+
+  beforeEach(async () => {
+    service = {
+      get:            vi.fn().mockResolvedValue(undefined),
+      save:           vi.fn().mockResolvedValue(123),
+      listCategories: vi.fn().mockResolvedValue([]),
+      saveCategory:   vi.fn().mockResolvedValue(99),
+    };
+
+    await TestBed.configureTestingModule({
+      imports: [PlayEditorComponent],
+      providers: [
+        provideRouter([]),
+        { provide: PlayService, useValue: service },
+        {
+          provide: ActivatedRoute,
+          useValue: {
+            snapshot: {
+              paramMap: { get: (k: string) => k === 'teamId' ? '42' : null },
+            },
+          },
+        },
+      ],
+    }).compileComponents();
+
+    const fixture = TestBed.createComponent(PlayEditorComponent);
+    component = fixture.componentInstance;
+    fixture.detectChanges();
+    await fixture.whenStable();
+  });
+
+  // ── setCategoryId ──────────────────────────────────────────────
+
+  it('setCategoryId parses a numeric string into the signal', () => {
+    component.setCategoryId('7');
+    expect(component.playCat()).toBe(7);
+  });
+
+  it('setCategoryId sets undefined for an empty string', () => {
+    component.setCategoryId('7');
+    component.setCategoryId('');
+    expect(component.playCat()).toBeUndefined();
+  });
+
+  // ── createCategory ─────────────────────────────────────────────
+
+  it('createCategory saves the category, clears the input, reloads, and selects the new id', async () => {
+    const newCat = { id: 99, name: 'Fast Break', team_id: 42 };
+    service.saveCategory.mockResolvedValue(99);
+    service.listCategories.mockResolvedValue([newCat]);
+
+    component.newCategoryName = 'Fast Break';
+    await component.createCategory();
+
+    expect(service.saveCategory).toHaveBeenCalledWith({ name: 'Fast Break', team_id: 42 });
+    expect(component.newCategoryName).toBe('');
+    expect(component.categories()).toEqual([newCat]);
+    expect(component.playCat()).toBe(99);
+  });
+
+  it('createCategory trims the input before saving', async () => {
+    service.saveCategory.mockResolvedValue(99);
+    service.listCategories.mockResolvedValue([]);
+
+    component.newCategoryName = '  Zone Press  ';
+    await component.createCategory();
+
+    expect(service.saveCategory).toHaveBeenCalledWith({ name: 'Zone Press', team_id: 42 });
+  });
+
+  it('createCategory is a no-op when the input is blank', async () => {
+    component.newCategoryName = '   ';
+    await component.createCategory();
+    expect(service.saveCategory).not.toHaveBeenCalled();
+  });
+
+  // ── save() auto-creates pending category ───────────────────────
+
+  it('save() auto-creates a pending category before building the payload', async () => {
+    vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+
+    const newCat = { id: 99, name: 'Man Offense', team_id: 42 };
+    service.saveCategory.mockResolvedValue(99);
+    service.listCategories.mockResolvedValue([newCat]);
+
+    component.newCategoryName = 'Man Offense';
+    await component.save();
+
+    expect(service.saveCategory).toHaveBeenCalledWith({ name: 'Man Offense', team_id: 42 });
+    const savedPlay = service.save.mock.calls.at(-1)[0];
+    expect(savedPlay.category_id).toBe(99);
+  });
+
+  it('save() does not call saveCategory when newCategoryName is empty', async () => {
+    vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+    component.newCategoryName = '';
+    await component.save();
+    expect(service.saveCategory).not.toHaveBeenCalled();
   });
 });
