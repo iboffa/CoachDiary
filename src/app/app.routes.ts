@@ -50,6 +50,13 @@ export const routes: Routes = [
       import('./features/playbook/play-editor/play-editor.component').then(m => m.PlayEditorComponent),
   },
 
+  // Team — notes
+  {
+    path: 'teams/:teamId/notes',
+    loadComponent: () =>
+      import('./features/teams/team-notes/team-notes.component').then(m => m.TeamNotesComponent),
+  },
+
   // Team — training sessions
   {
     path: 'teams/:teamId/training',

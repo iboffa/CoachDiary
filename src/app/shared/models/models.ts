@@ -6,6 +6,14 @@ export interface Team {
   updated_at?: string;
 }
 
+export interface TeamNote {
+  id?: number;
+  team_id: number;
+  date: string;
+  content: string;
+  created_at?: string;
+}
+
 export interface Opponent {
   id?: number;
   team_id: number;

@@ -1,0 +1,135 @@
+.team-notes-page {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.page-header {
+  display: flex;
+  align-items: flex-start;
+  padding: 28px 32px 20px;
+  border-bottom: 1px solid #2a2f3e;
+
+  &__title {
+    h1 {
+      margin: 0 0 4px;
+      font-size: 22px;
+      font-weight: 700;
+      color: #e8eaf0;
+    }
+    p {
+      margin: 0;
+      font-size: 13px;
+      color: #8892a4;
+    }
+  }
+}
+
+.journal-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.add-entry-card {
+  background: #161b27;
+  border: 1px solid #2a2f3e;
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+
+  &__date-row {
+    display: flex;
+    align-items: center;
+  }
+
+  &__textarea {
+    width: 100%;
+    min-height: 100px;
+    resize: vertical;
+    background: #0f1520;
+    border: 1px solid #2a2f3e;
+    border-radius: 8px;
+    padding: 12px;
+    font-size: 14px;
+    line-height: 1.6;
+    color: #e8eaf0;
+    font-family: inherit;
+    box-sizing: border-box;
+    transition: border-color 0.15s;
+
+    &::placeholder { color: #4a5568; }
+    &:focus { outline: none; border-color: #2563eb60; }
+  }
+
+  &__footer {
+    display: flex;
+    justify-content: flex-end;
+  }
+}
+
+.empty-hint {
+  text-align: center;
+  color: #4a5568;
+  font-size: 13px;
+  padding: 32px 0;
+}
+
+.entries-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.entry-card {
+  background: #161b27;
+  border: 1px solid #2a2f3e;
+  border-radius: 12px;
+  padding: 16px 20px;
+
+  &__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+  }
+
+  &__date {
+    font-size: 12px;
+    font-weight: 600;
+    color: #f97316;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  &__delete {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border: none;
+    background: transparent;
+    color: #4a5568;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: color 0.12s, background 0.12s;
+
+    svg { width: 14px; height: 14px; }
+
+    &:hover { color: #dc2626; background: #dc262620; }
+  }
+
+  &__content {
+    margin: 0;
+    font-size: 14px;
+    line-height: 1.7;
+    color: #c8cdd8;
+    white-space: pre-wrap;
+  }
+}
