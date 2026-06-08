@@ -1,0 +1,240 @@
+<div class="editor-layout">
+
+  <!-- Top bar -->
+  <header class="editor-topbar">
+    <button class="btn btn--ghost" (click)="back()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 19l-7-7m0 0l7-7m-7 7h18" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Session
+    </button>
+
+    <div class="drill-meta">
+      <input class="drill-name-input" [ngModel]="drillName()" (ngModelChange)="drillName.set($event)" placeholder="Drill name"/>
+    </div>
+
+    <div class="court-toggle">
+      <button class="toggle-btn" [class.active]="courtMode() === 'half'" (click)="switchCourtMode('half')">Half</button>
+      <button class="toggle-btn" [class.active]="courtMode() === 'full'" (click)="switchCourtMode('full')">Full</button>
+    </div>
+
+    <div class="topbar-actions">
+      <button class="btn btn--primary" (click)="save()" [disabled]="saving()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        {{ saving() ? 'Saving…' : 'Save' }}
+      </button>
+    </div>
+  </header>
+
+  <div class="editor-body">
+
+    <!-- Left toolbar -->
+    <aside class="tool-panel">
+      <div class="tool-group">
+        <span class="tool-group__label">Tools</span>
+        <button class="tool-btn" [class.active]="activeTool() === 'select'" (click)="setTool('select')" title="Select / Move tokens">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 0l16 12-7 1-4 8z"/></svg>
+        </button>
+        <button class="tool-btn erase" [class.active]="activeTool() === 'erase'" (click)="setTool('erase')" title="Erase token or path">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 20H7L3 16l9.5-9.5a2 2 0 012.83 0l4.67 4.67a2 2 0 010 2.83L20 14" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+      </div>
+
+      <div class="tool-group">
+        <span class="tool-group__label">Add</span>
+        <button class="tool-btn offense" (click)="addOffensePlayer()" title="Add offense player">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><text x="12" y="16" text-anchor="middle" font-size="9" fill="currentColor" stroke="none" font-weight="bold">O</text></svg>
+        </button>
+        <button class="tool-btn defense" (click)="addDefensePlayer()" title="Add defender">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="9"/><text x="12" y="16" text-anchor="middle" font-size="9" fill="currentColor" stroke="none" font-weight="bold">X</text></svg>
+        </button>
+        <button class="tool-btn coach" (click)="addCoachPlayer()" title="Add coach">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><text x="12" y="16" text-anchor="middle" font-size="9" fill="currentColor" stroke="none" font-weight="bold">C</text></svg>
+        </button>
+        <button class="tool-btn cone" (click)="addCone()" title="Add cone">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 4L20 20H4z" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+      </div>
+
+      <div class="tool-group">
+        <span class="tool-group__label">Paths</span>
+        <button class="tool-btn" (click)="undo()" [disabled]="!canUndo()" title="Undo (Ctrl+Z)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10" stroke-linecap="round" stroke-linejoin="round"/><path d="M3.51 15a9 9 0 1 0 .49-4.98L1 10" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <button class="tool-btn erase" (click)="clearAllPaths()" title="Clear all paths" [disabled]="currentPathCount() === 0">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+      </div>
+    </aside>
+
+    <!-- Court canvas -->
+    <section class="court-wrapper">
+      @if (pendingAction()) {
+        <div class="draw-hint">
+          Drawing <strong>{{ pendingAction() }}</strong> — drag to place the destination spline from the player center
+        </div>
+      } @else if (pendingPassFrom()) {
+        <div class="draw-hint">
+          Select receiver — click on a player to pass the ball
+        </div>
+      } @else if (pathSelected()) {
+        <div class="draw-hint">
+          Arrow selected — press <kbd>Delete</kbd> to remove
+        </div>
+      }
+      <canvas #courtCanvas></canvas>
+    </section>
+
+    <!-- Right panel -->
+    <aside class="play-info-panel">
+
+      <div class="phase-panel">
+        <div class="phase-label">Phase {{ currentPhaseIndex() + 1 }}</div>
+        @if (currentPathCount() === 0) {
+          <p class="phase-hint">Click a player to assign an action, then draw the movement path on the court.</p>
+        } @else {
+          <p class="phase-hint">{{ currentPathCount() }} movement{{ currentPathCount() !== 1 ? 's' : '' }} drawn.</p>
+        }
+        <button class="btn btn--accent" (click)="nextPhase()" [disabled]="currentPathCount() === 0">
+          Next Phase →
+        </button>
+      </div>
+
+      @if (phases.length > 0) {
+        <div class="phases-history">
+          <div class="phases-history__title">Recorded phases</div>
+          @for (phase of phases; track $index) {
+            <div class="phase-chip" [class.phase-chip--active]="$index === currentPhaseIndex()" (click)="jumpToPhase($index)">
+              Phase {{ $index + 1 }} &mdash; {{ phase.paths.length }} move{{ phase.paths.length !== 1 ? 's' : '' }}
+            </div>
+          }
+        </div>
+      }
+
+      <div class="legend" style="padding: 14px 14px 0;">
+        <div class="legend-item offense"><span class="dot"></span> Offense</div>
+        <div class="legend-item defense"><span class="dot"></span> Defense</div>
+        <div class="legend-item coach"><span class="dot"></span> Coach</div>
+        <div class="legend-item cone"><span class="dot"></span> Cone</div>
+      </div>
+
+      <div class="action-legend">
+        <div class="al-item dribble">
+          <svg class="al-line" viewBox="0 0 30 10">
+            <path d="M 0 5 C 1.5 1 4.5 1 6 5 C 7.5 9 10.5 9 12 5 C 13.5 1 16.5 1 18 5 L 26 5"
+                  stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M 26 5 L 23 3 M 26 5 L 23 7"
+                  stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+          </svg>
+          Dribble
+        </div>
+        <div class="al-item pass">- - Pass</div>
+        <div class="al-item cut">&#8212; Cut</div>
+        <div class="al-item screen">&#8212;| Screen</div>
+        <div class="al-item dho">- - Hand-off</div>
+        <div class="al-item shoot">- - Shoot</div>
+      </div>
+
+    </aside>
+  </div>
+
+  <!-- Bottom: preview / animation bar -->
+  <footer class="anim-bar">
+    <button class="anim-btn" (click)="stopAnimation()" [disabled]="!isAnimating()" title="Stop">
+      <svg viewBox="0 0 24 24" fill="currentColor"><rect x="5" y="5" width="14" height="14" rx="1"/></svg>
+    </button>
+
+    @if (isAnimating()) {
+      <button class="anim-btn" (click)="rollbackPhase()" title="Step back">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6 8.5 6V6z"/></svg>
+      </button>
+    }
+
+    @if (!isAnimating()) {
+      <button class="anim-btn play" (click)="previewPlay()" [disabled]="!canPreview()" title="Preview exercise">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 4l14 8-14 8z"/></svg>
+      </button>
+    } @else {
+      <button class="anim-btn play" (click)="togglePause()" title="{{ isPaused() ? 'Resume' : 'Pause' }}">
+        @if (isPaused()) {
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 4l14 8-14 8z"/></svg>
+        } @else {
+          <svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+        }
+      </button>
+    }
+
+    <div class="anim-progress">
+      <div class="anim-progress__bar" [style.width.%]="animProgress() * 100"></div>
+    </div>
+
+    <div class="speed-control">
+      <label>Speed</label>
+      <input type="range" min="0.5" max="3" step="0.5" [ngModel]="animSpeed()" (ngModelChange)="animSpeed.set($event)"/>
+      <span>{{ animSpeed() }}x</span>
+    </div>
+
+    <label class="anim-toggle">
+      <input type="checkbox" [ngModel]="showAnimatedLines()" (ngModelChange)="showAnimatedLines.set($event)"/>
+      <span>Show Lines</span>
+    </label>
+
+    @if (phaseCount() > 0) {
+      <div class="phase-count-badge">{{ phaseCount() }} phase{{ phaseCount() !== 1 ? 's' : '' }}</div>
+    }
+  </footer>
+
+</div>
+
+<!-- Context menu backdrop -->
+@if (contextMenu()) {
+  <div class="ctx-backdrop" (click)="closeContextMenu()"></div>
+  <div class="context-menu"
+       [style.left.px]="contextMenu()!.clientX + 8"
+       [style.top.px]="contextMenu()!.clientY - 8"
+       (click)="$event.stopPropagation()">
+
+    <button class="ctx-btn give-ball" (click)="toggleBallCarrier(contextMenu()!.playerId)">
+      <span class="ctx-icon">&#9679;</span>
+      {{ contextMenu()!.isBallCarrier ? 'Remove Ball' : 'Give Ball' }}
+    </button>
+    <div class="ctx-divider"></div>
+
+    @if (contextMenu()!.isBallCarrier) {
+      <button class="ctx-btn dribble" (click)="selectAction('dribble')">
+        <span class="ctx-icon">&#8594;</span> Dribble
+      </button>
+      <button class="ctx-btn pass" (click)="selectAction('pass')">
+        <span class="ctx-icon">&#8674;</span> Pass
+      </button>
+      <button class="ctx-btn shoot" (click)="selectAction('shoot')">
+        <span class="ctx-icon">&#9711;</span> Shoot
+      </button>
+      @if (contextMenu()!.hasNearbyPlayer) {
+        <button class="ctx-btn dho" (click)="selectAction('dribble-handoff')">
+          <span class="ctx-icon">&#8644;</span> Hand-Off
+        </button>
+      }
+    } @else {
+      <button class="ctx-btn cut" (click)="selectAction('cut')">
+        <span class="ctx-icon">&#8599;</span> Cut
+      </button>
+      <button class="ctx-btn screen" (click)="selectAction('screen')">
+        <span class="ctx-icon">&#8869;</span> Screen
+      </button>
+    }
+
+    @if (canRemovePlayerPass(contextMenu()!.playerId) || canRemovePlayerShoot(contextMenu()!.playerId)) {
+      <div class="ctx-divider"></div>
+      @if (canRemovePlayerPass(contextMenu()!.playerId)) {
+        <button class="ctx-btn remove" (click)="removePlayerPass(contextMenu()!.playerId)">
+          <span class="ctx-icon">&#9003;</span> Remove Pass
+        </button>
+      }
+      @if (canRemovePlayerShoot(contextMenu()!.playerId)) {
+        <button class="ctx-btn remove" (click)="removePlayerShoot(contextMenu()!.playerId)">
+          <span class="ctx-icon">&#9003;</span> Remove Shoot
+        </button>
+      }
+    }
+
+  </div>
+}

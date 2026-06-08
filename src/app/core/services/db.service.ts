@@ -3,7 +3,7 @@ import { Injectable } from '@angular/core';
 import {
   Player, PlayerNote, Play, PlaySummary,
   TrainingSession, SeasonPlan, GameNote,
-  Team, Opponent, OpponentPlayer, OpponentNote,
+  Team, Opponent, OpponentPlayer, OpponentNote, SavedDrill,
 } from '../../shared/models/models';
 
 class CoachDiaryDb extends Dexie {
@@ -11,6 +11,7 @@ class CoachDiaryDb extends Dexie {
   playerNotes!: Table<PlayerNote, number>;
   plays!: Table<Play, number>;
   trainingSessions!: Table<TrainingSession, number>;
+  savedDrills!: Table<SavedDrill, number>;
   seasonPlans!: Table<SeasonPlan, number>;
   gameNotes!: Table<GameNote, number>;
   teams!: Table<Team, number>;
@@ -35,6 +36,12 @@ class CoachDiaryDb extends Dexie {
       opponents: '++id, team_id',
       opponentNotes: '++id, opponent_id, date',
       opponentPlayers: '++id, opponent_id',
+    });
+    this.version(3).stores({
+      trainingSessions: '++id, team_id, date',
+    });
+    this.version(4).stores({
+      savedDrills: '++id, name',
     });
   }
 }
@@ -212,8 +219,24 @@ export class DbService {
   }
 
   // ── Training sessions ─────────────────────────────────────────
-  listTrainingSessions(): Promise<TrainingSession[]> {
-    return this.db.trainingSessions.orderBy('date').reverse().toArray();
+  async listTrainingSessions(teamId?: number): Promise<TrainingSession[]> {
+    let all: TrainingSession[];
+    if (teamId !== undefined) {
+      all = await this.db.trainingSessions.where('team_id').equals(teamId).reverse().sortBy('date');
+    } else {
+      all = await this.db.trainingSessions.orderBy('date').reverse().toArray();
+    }
+    return all.filter(s => !s.is_template);
+  }
+
+  async listTrainingSessionTemplates(teamId?: number): Promise<TrainingSession[]> {
+    let all: TrainingSession[];
+    if (teamId !== undefined) {
+      all = await this.db.trainingSessions.where('team_id').equals(teamId).reverse().sortBy('date');
+    } else {
+      all = await this.db.trainingSessions.orderBy('date').reverse().toArray();
+    }
+    return all.filter(s => !!s.is_template);
   }
 
   getTrainingSession(id: number): Promise<TrainingSession | undefined> {
@@ -231,6 +254,24 @@ export class DbService {
 
   deleteTrainingSession(id: number): Promise<void> {
     return this.db.trainingSessions.delete(id);
+  }
+
+  // ── Saved drills ─────────────────────────────────────────────
+  listSavedDrills(): Promise<SavedDrill[]> {
+    return this.db.savedDrills.orderBy('name').toArray();
+  }
+
+  async saveSavedDrill(drill: SavedDrill): Promise<number> {
+    const now = new Date().toISOString();
+    if (drill.id) {
+      await this.db.savedDrills.update(drill.id, { ...drill });
+      return drill.id;
+    }
+    return this.db.savedDrills.add({ ...drill, created_at: now });
+  }
+
+  deleteSavedDrill(id: number): Promise<void> {
+    return this.db.savedDrills.delete(id);
   }
 
   // ── Season plans ──────────────────────────────────────────────
