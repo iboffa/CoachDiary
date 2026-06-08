@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { DbService } from './db.service';
-import { Play, PlaySummary } from '../../shared/models/models';
+import { Play, PlayCategory, PlaySummary } from '../../shared/models/models';
 
 @Injectable({ providedIn: 'root' })
 export class PlayService {
@@ -15,4 +15,8 @@ export class PlayService {
   get(id: number): Promise<Play | undefined> { return this.db.getPlay(id); }
   save(play: Play): Promise<number> { return this.db.savePlay(play); }
   delete(id: number): Promise<void> { return this.db.deletePlay(id); }
+
+  listCategories(teamId: number): Promise<PlayCategory[]> { return this.db.listPlayCategories(teamId); }
+  saveCategory(cat: PlayCategory): Promise<number> { return this.db.savePlayCategory(cat); }
+  deleteCategory(id: number): Promise<void> { return this.db.deletePlayCategory(id); }
 }

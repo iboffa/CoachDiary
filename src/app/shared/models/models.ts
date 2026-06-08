@@ -62,13 +62,24 @@ export interface PlayerNote {
   created_at?: string;
 }
 
+export interface PlayCategory {
+  id?: number;
+  name: string;
+  team_id: number;
+}
+
+export interface DrillCategory {
+  id?: number;
+  name: string;
+}
+
 export interface Play {
   id?: number;
   team_id?: number;
   opponent_id?: number;
   name: string;
   description?: string;
-  category: 'offense' | 'defense' | 'transition' | 'inbound' | 'press-break';
+  category_id?: number;
   canvas_state: string;
   thumbnail?: string | null;
   is_template?: boolean;
@@ -91,6 +102,7 @@ export interface SavedDrill {
   name: string;
   duration_minutes: number;
   description?: string;
+  category_id?: number;
   created_at?: string;
 }
 

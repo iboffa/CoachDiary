@@ -4,6 +4,7 @@ import {
   Player, PlayerNote, Play, PlaySummary,
   TrainingSession, SeasonPlan, GameNote,
   Team, TeamNote, Opponent, OpponentPlayer, OpponentNote, SavedDrill,
+  PlayCategory, DrillCategory,
 } from '../../shared/models/models';
 
 class CoachDiaryDb extends Dexie {
@@ -19,6 +20,8 @@ class CoachDiaryDb extends Dexie {
   opponents!: Table<Opponent, number>;
   opponentNotes!: Table<OpponentNote, number>;
   opponentPlayers!: Table<OpponentPlayer, number>;
+  playCategories!: Table<PlayCategory, number>;
+  drillCategories!: Table<DrillCategory, number>;
 
   constructor() {
     super('CoachDiaryDB');
@@ -47,6 +50,14 @@ class CoachDiaryDb extends Dexie {
     this.version(5).stores({
       teamNotes: '++id, team_id, date',
     });
+    this.version(6).stores({
+      plays: '++id, team_id, opponent_id, category_id, updated_at',
+      savedDrills: '++id, name, category_id',
+      playCategories: '++id, team_id',
+      drillCategories: '++id',
+    }).upgrade(tx => tx.table('plays').toCollection().modify(play => {
+      delete (play as Record<string, unknown>)['category'];
+    }));
   }
 }
 
@@ -230,8 +241,14 @@ export class DbService {
   async savePlay(play: Play): Promise<number> {
     const now = new Date().toISOString();
     if (play.id) {
-      await this.db.plays.update(play.id, { ...play, updated_at: now });
-      return play.id;
+      const playId = play.id;
+      await this.db.plays.where('id').equals(playId).modify(stored => {
+        Object.assign(stored, { ...play, updated_at: now });
+        if (play.category_id === undefined) {
+          delete (stored as unknown as Record<string, unknown>)['category_id'];
+        }
+      });
+      return playId;
     }
     return this.db.plays.add({ ...play, created_at: now, updated_at: now });
   }
@@ -334,5 +351,41 @@ export class DbService {
 
   deleteGameNote(id: number): Promise<void> {
     return this.db.gameNotes.delete(id);
+  }
+
+  // ── Play categories ───────────────────────────────────────────
+  listPlayCategories(teamId: number): Promise<PlayCategory[]> {
+    return this.db.playCategories.where('team_id').equals(teamId).sortBy('name');
+  }
+
+  async savePlayCategory(cat: PlayCategory): Promise<number> {
+    if (cat.id) {
+      await this.db.playCategories.update(cat.id, cat);
+      return cat.id;
+    }
+    return this.db.playCategories.add(cat);
+  }
+
+  async deletePlayCategory(id: number): Promise<void> {
+    await this.db.plays.where('category_id').equals(id).modify({ category_id: undefined });
+    await this.db.playCategories.delete(id);
+  }
+
+  // ── Drill categories ──────────────────────────────────────────
+  listDrillCategories(): Promise<DrillCategory[]> {
+    return this.db.drillCategories.toArray().then(cats => cats.sort((a, b) => a.name.localeCompare(b.name)));
+  }
+
+  async saveDrillCategory(cat: DrillCategory): Promise<number> {
+    if (cat.id) {
+      await this.db.drillCategories.update(cat.id, cat);
+      return cat.id;
+    }
+    return this.db.drillCategories.add(cat);
+  }
+
+  async deleteDrillCategory(id: number): Promise<void> {
+    await this.db.savedDrills.where('category_id').equals(id).modify({ category_id: undefined });
+    await this.db.drillCategories.delete(id);
   }
 }

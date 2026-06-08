@@ -2,7 +2,7 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { PlayService } from '../../../core/services/play.service';
-import { PlaySummary } from '../../../shared/models/models';
+import { PlayCategory, PlaySummary } from '../../../shared/models/models';
 
 @Component({
   selector: 'app-play-list',
@@ -42,19 +42,68 @@ export class PlayListComponent {
 
   readonly plays = signal<PlaySummary[]>([]);
   readonly templates = signal<PlaySummary[]>([]);
+  readonly categories = signal<PlayCategory[]>([]);
+  readonly collapsedFolders = signal<Set<number | null>>(new Set());
   readonly isEmpty = computed(() => this.plays().length === 0);
+
+  readonly groupedPlays = computed(() => {
+    const cats = this.categories();
+    const plays = this.plays();
+    const catMap = new Map(cats.map(c => [c.id!, c]));
+    const byCategory = new Map<number, PlaySummary[]>();
+    const uncategorized: PlaySummary[] = [];
+
+    for (const play of plays) {
+      if (play.category_id != null && catMap.has(play.category_id)) {
+        const arr = byCategory.get(play.category_id) ?? [];
+        arr.push(play);
+        byCategory.set(play.category_id, arr);
+      } else {
+        uncategorized.push(play);
+      }
+    }
+
+    const groups: { category: PlayCategory | null; plays: PlaySummary[] }[] = cats
+      .filter(c => byCategory.has(c.id!))
+      .map(c => ({ category: c, plays: byCategory.get(c.id!)! }));
+
+    if (uncategorized.length > 0) groups.push({ category: null, plays: uncategorized });
+    return groups;
+  });
 
   constructor() {
     this.load();
   }
 
   private async load(): Promise<void> {
-    const [plays, templates] = await Promise.all([
+    const [plays, templates, categories] = await Promise.all([
       this.playService.list(this.filter),
       this.playService.listTemplates(this.filter),
+      this.teamId !== null ? this.playService.listCategories(this.teamId) : Promise.resolve([]),
     ]);
     this.plays.set(plays);
     this.templates.set(templates);
+    this.categories.set(categories);
+  }
+
+  toggleFolder(categoryId: number | null): void {
+    this.collapsedFolders.update(s => {
+      const next = new Set(s);
+      if (next.has(categoryId)) next.delete(categoryId);
+      else next.add(categoryId);
+      return next;
+    });
+  }
+
+  isFolderCollapsed(categoryId: number | null): boolean {
+    return this.collapsedFolders().has(categoryId);
+  }
+
+  async deleteCategory(id: number, event: MouseEvent): Promise<void> {
+    event.stopPropagation();
+    if (!confirm('Delete this category? Plays will become uncategorized.')) return;
+    await this.playService.deleteCategory(id);
+    await this.load();
   }
 
   openEditor(id?: number): void {
@@ -104,7 +153,4 @@ export class PlayListComponent {
     }
   }
 
-  categoryClass(cat: string): string {
-    return `badge badge--${cat}`;
-  }
 }

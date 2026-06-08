@@ -3,7 +3,6 @@ import {
   afterNextRender, computed, inject, signal, viewChild,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { TitleCasePipe } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import {
   Canvas, Circle, Group, FabricText, Path, FabricObject,
@@ -16,7 +15,7 @@ import {
   CourtMode,
 } from './court-painter';
 import { PlayService } from '../../../core/services/play.service';
-import { Play } from '../../../shared/models/models';
+import { PlayCategory } from '../../../shared/models/models';
 import {
   BALL_INDICATOR_RADIUS,
   FIVE_OUT,
@@ -97,7 +96,7 @@ interface UndoSnapshot {
 
 @Component({
   selector: 'app-play-editor',
-  imports: [FormsModule, TitleCasePipe],
+  imports: [FormsModule],
   templateUrl: './play-editor.component.html',
   styleUrl: './play-editor.component.scss',
   host: {
@@ -119,8 +118,10 @@ export class PlayEditorComponent implements OnDestroy {
   readonly playId    = signal<number | null>(null);
   readonly playName  = signal('New Play');
   readonly playDesc  = signal('');
-  readonly playCat   = signal<Play['category']>('offense');
+  readonly playCat   = signal<number | undefined>(undefined);
   readonly courtMode = signal<CourtMode>('half');
+  readonly categories = signal<PlayCategory[]>([]);
+  newCategoryName = '';
 
   readonly activeTool    = signal<Tool>('select');
   readonly animState     = signal<AnimState>('idle');
@@ -147,7 +148,6 @@ export class PlayEditorComponent implements OnDestroy {
   readonly canUndo     = computed(() => this.undoStackSize() > 0);
   readonly pathSelected = signal(false);
 
-  readonly categories: Play['category'][] = ['offense', 'defense', 'transition', 'inbound', 'press-break'];
 
   // ── Internal canvas state ─────────────────────────────────────
   private tokens: PlayerToken[] = [];
@@ -212,6 +212,8 @@ export class PlayEditorComponent implements OnDestroy {
   constructor() {
     const id = this.route.snapshot.paramMap.get('id');
     if (id && id !== 'new') this.playId.set(parseInt(id, 10));
+
+    if (this.teamId !== null) this.loadCategories();
 
     afterNextRender(() => {
       this.initCanvas();
@@ -1398,11 +1400,12 @@ export class PlayEditorComponent implements OnDestroy {
         currentPhasePaths: this.currentPhasePaths,
         courtMode: this.courtMode(),
       });
+      if (this.newCategoryName.trim()) await this.createCategory();
       const play = buildPlaySavePayload({
         playId: this.playId(),
         name: this.playName(),
         description: this.playDesc(),
-        category: this.playCat(),
+        category_id: this.playCat(),
         state,
         thumbnail: this.fabricCanvas.toDataURL({ multiplier: 1, format: 'jpeg', quality: 0.6 }),
       });
@@ -1437,7 +1440,7 @@ export class PlayEditorComponent implements OnDestroy {
         playId: null,
         name: `Copy of ${this.playName()}`,
         description: this.playDesc(),
-        category: this.playCat(),
+        category_id: this.playCat(),
         state,
         thumbnail: this.fabricCanvas.toDataURL({ multiplier: 1, format: 'jpeg', quality: 0.6 }),
       });
@@ -1469,7 +1472,7 @@ export class PlayEditorComponent implements OnDestroy {
         playId: null,
         name: this.playName(),
         description: this.playDesc(),
-        category: this.playCat(),
+        category_id: this.playCat(),
         state,
         thumbnail: this.fabricCanvas.toDataURL({ multiplier: 1, format: 'jpeg', quality: 0.6 }),
       });
@@ -1484,7 +1487,7 @@ export class PlayEditorComponent implements OnDestroy {
     if (!play) return;
     this.playName.set(play.name);
     this.playDesc.set(play.description ?? '');
-    this.playCat.set(play.category);
+    this.playCat.set(play.category_id);
 
     const parsedCanvasState = parsePlayEditorCanvasState(play.canvas_state);
     if (parsedCanvasState.kind === 'empty' || parsedCanvasState.kind === 'invalid') {
@@ -1584,6 +1587,26 @@ export class PlayEditorComponent implements OnDestroy {
       playName: this.playName(),
       downloadFilename: toDownloadFilename(this.playName(), 'pdf'),
     });
+  }
+
+  // ── Categories ────────────────────────────────────────────────
+
+  private async loadCategories(): Promise<void> {
+    if (this.teamId === null) return;
+    this.categories.set(await this.playService.listCategories(this.teamId));
+  }
+
+  async createCategory(): Promise<void> {
+    const name = this.newCategoryName.trim();
+    if (!name || this.teamId === null) return;
+    const id = await this.playService.saveCategory({ name, team_id: this.teamId });
+    this.newCategoryName = '';
+    await this.loadCategories();
+    this.playCat.set(id);
+  }
+
+  setCategoryId(value: string): void {
+    this.playCat.set(value ? parseInt(value, 10) : undefined);
   }
 
   back(): void { this.router.navigate(this.listPath); }

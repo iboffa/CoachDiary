@@ -41,7 +41,7 @@ interface BuildPlaySavePayloadOptions {
   playId: number | null;
   name: string;
   description: string;
-  category: Play['category'];
+  category_id: number | undefined;
   state: PlayEditorPersistedState;
   thumbnail: string;
 }
@@ -73,7 +73,7 @@ export function buildPlaySavePayload({
   playId,
   name,
   description,
-  category,
+  category_id,
   state,
   thumbnail,
 }: BuildPlaySavePayloadOptions): Play {
@@ -81,7 +81,7 @@ export function buildPlaySavePayload({
     id: playId ?? undefined,
     name,
     description,
-    category,
+    category_id,
     canvas_state: JSON.stringify(state),
     thumbnail,
   };

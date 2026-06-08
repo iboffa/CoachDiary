@@ -2,7 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter, ActivatedRoute } from '@angular/router';
 import { TrainingComponent } from './training.component';
 import { TrainingSessionService } from '../../core/services/training-session.service';
-import { Drill, TrainingSession } from '../../shared/models/models';
+import { Drill, DrillCategory, SavedDrill, TrainingSession } from '../../shared/models/models';
 
 const DRILLS: Drill[] = [
   { id: 'a', name: 'Warm Up',  duration_minutes: 10, description: '' },
@@ -20,13 +20,16 @@ describe('TrainingComponent', () => {
 
   beforeEach(async () => {
     service = {
-      list:            vi.fn().mockResolvedValue([]),
-      listTemplates:   vi.fn().mockResolvedValue([]),
-      listSavedDrills: vi.fn().mockResolvedValue([]),
-      save:            vi.fn().mockResolvedValue(1),
-      delete:          vi.fn().mockResolvedValue(undefined),
-      saveSavedDrill:  vi.fn().mockResolvedValue(1),
-      deleteSavedDrill: vi.fn().mockResolvedValue(undefined),
+      list:                vi.fn().mockResolvedValue([]),
+      listTemplates:       vi.fn().mockResolvedValue([]),
+      listSavedDrills:     vi.fn().mockResolvedValue([]),
+      save:                vi.fn().mockResolvedValue(1),
+      delete:              vi.fn().mockResolvedValue(undefined),
+      saveSavedDrill:      vi.fn().mockResolvedValue(1),
+      deleteSavedDrill:    vi.fn().mockResolvedValue(undefined),
+      listDrillCategories: vi.fn().mockResolvedValue([]),
+      saveDrillCategory:   vi.fn().mockResolvedValue(1),
+      deleteDrillCategory: vi.fn().mockResolvedValue(undefined),
     };
 
     await TestBed.configureTestingModule({
@@ -310,6 +313,182 @@ describe('TrainingComponent', () => {
     it('sets scheduledMinutes to undefined when value is 0', () => {
       component.onScheduledMinutesChange(0);
       expect(component.scheduledMinutes()).toBeUndefined();
+    });
+  });
+
+  // ── groupedSavedDrills ─────────────────────────────────────────
+
+  describe('groupedSavedDrills', () => {
+    const CAT_X: DrillCategory = { id: 10, name: 'Defence' };
+    const CAT_Y: DrillCategory = { id: 20, name: 'Offence' };
+
+    function drill(id: number, category_id?: number): SavedDrill {
+      return { id, name: `Drill ${id}`, duration_minutes: 10, category_id };
+    }
+
+    it('groups drills under their matching category', () => {
+      component.drillCategories.set([CAT_X, CAT_Y]);
+      component.savedDrills.set([drill(1, 10), drill(2, 20)]);
+
+      const groups = component.groupedSavedDrills();
+      expect(groups).toHaveLength(2);
+      expect(groups[0].category?.id).toBe(10);
+      expect(groups[0].drills.map(d => d.id)).toEqual([1]);
+      expect(groups[1].category?.id).toBe(20);
+      expect(groups[1].drills.map(d => d.id)).toEqual([2]);
+    });
+
+    it('puts drills without category_id into the uncategorized group', () => {
+      component.drillCategories.set([CAT_X]);
+      component.savedDrills.set([drill(1)]);
+
+      const groups = component.groupedSavedDrills();
+      expect(groups).toHaveLength(1);
+      expect(groups[0].category).toBeNull();
+      expect(groups[0].drills[0].id).toBe(1);
+    });
+
+    it('treats an unknown category_id as uncategorized', () => {
+      component.drillCategories.set([CAT_X]);
+      component.savedDrills.set([drill(1, 999)]);
+
+      const groups = component.groupedSavedDrills();
+      expect(groups).toHaveLength(1);
+      expect(groups[0].category).toBeNull();
+    });
+
+    it('omits categories that have no matching drills', () => {
+      component.drillCategories.set([CAT_X, CAT_Y]);
+      component.savedDrills.set([drill(1, 10)]);
+
+      const ids = component.groupedSavedDrills().map(g => g.category?.id);
+      expect(ids).toEqual([10]);
+    });
+
+    it('appends the uncategorized group after all named category groups', () => {
+      component.drillCategories.set([CAT_X]);
+      component.savedDrills.set([drill(1, 10), drill(2)]);
+
+      const groups = component.groupedSavedDrills();
+      expect(groups).toHaveLength(2);
+      expect(groups[0].category?.id).toBe(10);
+      expect(groups[1].category).toBeNull();
+    });
+
+    it('returns an empty array when there are no drills', () => {
+      component.drillCategories.set([CAT_X]);
+      component.savedDrills.set([]);
+      expect(component.groupedSavedDrills()).toEqual([]);
+    });
+  });
+
+  // ── createDrillCategory ────────────────────────────────────────
+
+  describe('createDrillCategory', () => {
+    it('saves the category, clears the input, and reloads', async () => {
+      const newCat: DrillCategory = { id: 5, name: 'Shooting' };
+      service.saveDrillCategory.mockResolvedValue(5);
+      service.listDrillCategories.mockResolvedValue([newCat]);
+
+      component.newDrillCategoryName = 'Shooting';
+      await component.createDrillCategory();
+
+      expect(service.saveDrillCategory).toHaveBeenCalledWith({ name: 'Shooting' });
+      expect(component.newDrillCategoryName).toBe('');
+      expect(component.drillCategories()).toEqual([newCat]);
+    });
+
+    it('trims the name before saving', async () => {
+      service.saveDrillCategory.mockResolvedValue(1);
+      service.listDrillCategories.mockResolvedValue([]);
+
+      component.newDrillCategoryName = '  Passing  ';
+      await component.createDrillCategory();
+
+      expect(service.saveDrillCategory).toHaveBeenCalledWith({ name: 'Passing' });
+    });
+
+    it('is a no-op when the input is blank', async () => {
+      component.newDrillCategoryName = '   ';
+      await component.createDrillCategory();
+      expect(service.saveDrillCategory).not.toHaveBeenCalled();
+    });
+  });
+
+  // ── deleteDrillCategory ────────────────────────────────────────
+
+  describe('deleteDrillCategory', () => {
+    it('calls service.deleteDrillCategory and reloads when confirmed', async () => {
+      vi.spyOn(window, 'confirm').mockReturnValue(true);
+      const event = { stopPropagation: vi.fn() } as unknown as Event;
+
+      await component.deleteDrillCategory(7, event);
+
+      expect(event.stopPropagation).toHaveBeenCalled();
+      expect(service.deleteDrillCategory).toHaveBeenCalledWith(7);
+      expect(service.listDrillCategories).toHaveBeenCalled();
+      expect(service.listSavedDrills).toHaveBeenCalled();
+    });
+
+    it('aborts without deleting when the user cancels', async () => {
+      vi.spyOn(window, 'confirm').mockReturnValue(false);
+      const event = { stopPropagation: vi.fn() } as unknown as Event;
+
+      await component.deleteDrillCategory(7, event);
+
+      expect(service.deleteDrillCategory).not.toHaveBeenCalled();
+    });
+  });
+
+  // ── toggleDrillFolder / isDrillFolderCollapsed ─────────────────
+
+  describe('toggleDrillFolder / isDrillFolderCollapsed', () => {
+    it('collapses a folder on the first toggle', () => {
+      expect(component.isDrillFolderCollapsed(10)).toBe(false);
+      component.toggleDrillFolder(10);
+      expect(component.isDrillFolderCollapsed(10)).toBe(true);
+    });
+
+    it('expands a collapsed folder on the second toggle', () => {
+      component.toggleDrillFolder(10);
+      component.toggleDrillFolder(10);
+      expect(component.isDrillFolderCollapsed(10)).toBe(false);
+    });
+
+    it('handles the null (uncategorized) folder key', () => {
+      component.toggleDrillFolder(null);
+      expect(component.isDrillFolderCollapsed(null)).toBe(true);
+      component.toggleDrillFolder(null);
+      expect(component.isDrillFolderCollapsed(null)).toBe(false);
+    });
+
+    it('collapses each folder independently', () => {
+      component.toggleDrillFolder(10);
+      expect(component.isDrillFolderCollapsed(10)).toBe(true);
+      expect(component.isDrillFolderCollapsed(20)).toBe(false);
+    });
+  });
+
+  // ── setDrillCategory ──────────────────────────────────────────
+
+  describe('setDrillCategory', () => {
+    it('calls saveSavedDrill with the new category_id and reloads the library', async () => {
+      const drill: SavedDrill = { id: 3, name: 'Lay-ups', duration_minutes: 15 };
+      service.listSavedDrills.mockResolvedValue([{ ...drill, category_id: 10 }]);
+
+      await component.setDrillCategory(drill, 10);
+
+      expect(service.saveSavedDrill).toHaveBeenCalledWith({ ...drill, category_id: 10 });
+      expect(component.savedDrills()[0].category_id).toBe(10);
+    });
+
+    it('passes undefined to remove a category from a drill', async () => {
+      const drill: SavedDrill = { id: 3, name: 'Lay-ups', duration_minutes: 15, category_id: 10 };
+      service.listSavedDrills.mockResolvedValue([{ id: 3, name: 'Lay-ups', duration_minutes: 15 }]);
+
+      await component.setDrillCategory(drill, undefined);
+
+      expect(service.saveSavedDrill).toHaveBeenCalledWith({ ...drill, category_id: undefined });
     });
   });
 });

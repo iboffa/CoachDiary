@@ -175,21 +175,52 @@
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" stroke-linecap="round" stroke-linejoin="round"/></svg>
                 Saved Drills
               </div>
+
+              <!-- New category row -->
+              <div class="library-new-cat">
+                <input class="library-cat-input" [(ngModel)]="newDrillCategoryName" placeholder="New category…" (keydown.enter)="createDrillCategory()"/>
+                <button class="btn btn--ghost btn--sm" (click)="createDrillCategory()" [disabled]="!newDrillCategoryName.trim()">+</button>
+              </div>
+
               @if (savedDrills().length === 0) {
                 <p class="library-empty">No saved drills yet — bookmark a drill below to add it here.</p>
               }
-              @for (sd of savedDrills(); track sd.id) {
-                <div class="library-item">
-                  <div class="library-item__info">
-                    <span class="li-name">{{ sd.name }}</span>
-                    <span class="li-meta">{{ sd.duration_minutes }}min{{ sd.description ? ' · ' + sd.description : '' }}</span>
+
+              @for (group of groupedSavedDrills(); track (group.category?.id ?? 'uncategorized')) {
+                <div class="library-folder" [class.library-folder--collapsed]="isDrillFolderCollapsed(group.category?.id ?? null)">
+                  <div class="library-folder__header" (click)="toggleDrillFolder(group.category?.id ?? null)">
+                    <svg viewBox="0 0 24 24" fill="currentColor" style="width:13px;height:13px;color:#2563eb;flex-shrink:0"><path d="M19.5 21a3 3 0 003-3v-4.5a3 3 0 00-3-3h-15a3 3 0 00-3 3V18a3 3 0 003 3h15zM1.5 10.146V6a3 3 0 013-3h5.379a2.25 2.25 0 011.59.659l2.122 2.121c.14.141.331.22.53.22H19.5a3 3 0 013 3v1.146A4.483 4.483 0 0019.5 9h-15a4.483 4.483 0 00-3 1.146z"/></svg>
+                    <span class="lf-name">{{ group.category?.name ?? 'Uncategorized' }}</span>
+                    <span class="lf-count">{{ group.drills.length }}</span>
+                    @if (group.category !== null) {
+                      <button class="lf-del-btn" (click)="deleteDrillCategory(group.category!.id!, $event)" title="Delete category">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 18L18 6M6 6l12 12" stroke-linecap="round"/></svg>
+                      </button>
+                    }
+                    <svg class="lf-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 9l-7 7-7-7" stroke-linecap="round" stroke-linejoin="round"/></svg>
                   </div>
-                  <button class="li-add-btn" (click)="addFromLibrary(sd)" title="Add to session">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 4v16m8-8H4" stroke-linecap="round"/></svg>
-                  </button>
-                  <button class="li-del-btn" (click)="removeFromLibrary(sd.id!, $event)" title="Remove from library">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12" stroke-linecap="round"/></svg>
-                  </button>
+                  <div class="library-folder__body">
+                    @for (sd of group.drills; track sd.id) {
+                      <div class="library-item">
+                        <div class="library-item__info">
+                          <span class="li-name">{{ sd.name }}</span>
+                          <span class="li-meta">{{ sd.duration_minutes }}min{{ sd.description ? ' · ' + sd.description : '' }}</span>
+                        </div>
+                        <select class="li-cat-select" [ngModel]="sd.category_id?.toString() ?? ''" (ngModelChange)="setDrillCategory(sd, $event ? +$event : undefined)" (click)="$event.stopPropagation()">
+                          <option value="">— None —</option>
+                          @for (cat of drillCategories(); track cat.id) {
+                            <option [value]="cat.id!.toString()">{{ cat.name }}</option>
+                          }
+                        </select>
+                        <button class="li-add-btn" (click)="addFromLibrary(sd)" title="Add to session">
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 4v16m8-8H4" stroke-linecap="round"/></svg>
+                        </button>
+                        <button class="li-del-btn" (click)="removeFromLibrary(sd.id!, $event)" title="Remove from library">
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12" stroke-linecap="round"/></svg>
+                        </button>
+                      </div>
+                    }
+                  </div>
                 </div>
               }
             </div>

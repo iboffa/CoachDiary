@@ -3,7 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { DatePipe } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { TrainingSessionService } from '../../core/services/training-session.service';
-import { Drill, SavedDrill, TrainingSession } from '../../shared/models/models';
+import { Drill, DrillCategory, SavedDrill, TrainingSession } from '../../shared/models/models';
 import { DrillPreviewComponent } from './drill-preview.component';
 
 @Component({
@@ -24,19 +24,47 @@ export class TrainingComponent {
     return isNaN(n) ? null : n;
   })();
 
-  readonly sessions      = signal<TrainingSession[]>([]);
-  readonly templates     = signal<TrainingSession[]>([]);
-  readonly savedDrills   = signal<SavedDrill[]>([]);
-  readonly showForm      = signal(false);
-  readonly isNew         = signal(false);
-  readonly saving        = signal(false);
-  readonly editingDrills = signal<Drill[]>([]);
-  readonly showLibrary   = signal(false);
-  readonly dragIndex     = signal<number | null>(null);
-  readonly dragOverIndex = signal<number | null>(null);
+  readonly sessions         = signal<TrainingSession[]>([]);
+  readonly templates        = signal<TrainingSession[]>([]);
+  readonly savedDrills      = signal<SavedDrill[]>([]);
+  readonly drillCategories  = signal<DrillCategory[]>([]);
+  readonly showForm         = signal(false);
+  readonly isNew            = signal(false);
+  readonly saving           = signal(false);
+  readonly editingDrills    = signal<Drill[]>([]);
+  readonly showLibrary      = signal(false);
+  readonly dragIndex        = signal<number | null>(null);
+  readonly dragOverIndex    = signal<number | null>(null);
   readonly scheduledMinutes = signal<number | undefined>(undefined);
+  readonly collapsedDrillFolders = signal<Set<number | null>>(new Set());
+  newDrillCategoryName = '';
 
   readonly isEmpty = computed(() => this.sessions().length === 0);
+
+  readonly groupedSavedDrills = computed(() => {
+    const cats = this.drillCategories();
+    const drills = this.savedDrills();
+    const catMap = new Map(cats.map(c => [c.id!, c]));
+    const byCategory = new Map<number, SavedDrill[]>();
+    const uncategorized: SavedDrill[] = [];
+
+    for (const drill of drills) {
+      if (drill.category_id !== undefined && catMap.has(drill.category_id)) {
+        const arr = byCategory.get(drill.category_id) ?? [];
+        arr.push(drill);
+        byCategory.set(drill.category_id, arr);
+      } else {
+        uncategorized.push(drill);
+      }
+    }
+
+    const groups: { category: DrillCategory | null; drills: SavedDrill[] }[] = cats
+      .filter(c => byCategory.has(c.id!))
+      .map(c => ({ category: c, drills: byCategory.get(c.id!)! }));
+
+    if (uncategorized.length > 0) groups.push({ category: null, drills: uncategorized });
+    return groups;
+  });
 
   readonly totalDrillMinutes = computed(() =>
     this.editingDrills().reduce((sum, d) => sum + (d.duration_minutes || 0), 0),
@@ -58,6 +86,7 @@ export class TrainingComponent {
   constructor() {
     this.load();
     this.loadSavedDrills();
+    this.loadDrillCategories();
   }
 
   private async load(): Promise<void> {
@@ -283,6 +312,11 @@ export class TrainingComponent {
     await this.loadSavedDrills();
   }
 
+  async setDrillCategory(drill: SavedDrill, categoryId: number | undefined): Promise<void> {
+    await this.service.saveSavedDrill({ ...drill, category_id: categoryId });
+    await this.loadSavedDrills();
+  }
+
   // ── Helpers ───────────────────────────────────────────────────
 
   drillsInfo(session: TrainingSession): { count: number; minutes: number } {
@@ -302,6 +336,41 @@ export class TrainingComponent {
     const h = Math.floor(minutes / 60);
     const m = minutes % 60;
     return h > 0 ? `${h}h${m > 0 ? ` ${m}m` : ''}` : `${m}m`;
+  }
+
+  // ── Drill categories ──────────────────────────────────────────
+
+  private async loadDrillCategories(): Promise<void> {
+    this.drillCategories.set(await this.service.listDrillCategories());
+  }
+
+  async createDrillCategory(): Promise<void> {
+    const name = this.newDrillCategoryName.trim();
+    if (!name) return;
+    await this.service.saveDrillCategory({ name });
+    this.newDrillCategoryName = '';
+    await this.loadDrillCategories();
+  }
+
+  async deleteDrillCategory(id: number, event: Event): Promise<void> {
+    event.stopPropagation();
+    if (!confirm('Delete this category? Drills will become uncategorized.')) return;
+    await this.service.deleteDrillCategory(id);
+    await this.loadDrillCategories();
+    await this.loadSavedDrills();
+  }
+
+  toggleDrillFolder(categoryId: number | null): void {
+    this.collapsedDrillFolders.update(s => {
+      const next = new Set(s);
+      if (next.has(categoryId)) next.delete(categoryId);
+      else next.add(categoryId);
+      return next;
+    });
+  }
+
+  isDrillFolderCollapsed(categoryId: number | null): boolean {
+    return this.collapsedDrillFolders().has(categoryId);
   }
 
   private parseDrills(json: string): Drill[] {
