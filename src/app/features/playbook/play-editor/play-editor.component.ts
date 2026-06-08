@@ -140,6 +140,8 @@ export class PlayEditorComponent implements OnDestroy {
   readonly pendingPassFrom   = signal<string | null>(null);
 
   readonly isPlaying   = computed(() => this.animState() === 'playing');
+  readonly isPaused    = computed(() => this.animState() === 'paused');
+  readonly isAnimating = computed(() => this.animState() !== 'idle');
   readonly canPreview  = computed(() => this.phaseCount() > 0);
   private readonly undoStackSize = signal(0);
   readonly canUndo     = computed(() => this.undoStackSize() > 0);
@@ -166,6 +168,16 @@ export class PlayEditorComponent implements OnDestroy {
   private animatedPhaseObjects: FabricObject[] = [];
   private readonly ANIM_DURATION = 2500;
   private activeAnimResolve: (() => void) | null = null;
+
+  // Pause / rollback state
+  private animTick: FrameRequestCallback | null = null;
+  private animElapsed = 0;
+  private animLastNow: number | null = null;
+  private animDuration = 0;
+  private animPhaseIndex = 0;
+  private animPhase: Phase | null = null;
+  private animScheduledPaths: ScheduledPath[] = [];
+  private pendingRestartPhase: number | null = null;
 
   private undoStack: UndoSnapshot[] = [];
   private editingPhaseIndex: number | null = null;
@@ -1143,54 +1155,75 @@ export class PlayEditorComponent implements OnDestroy {
 
   // ── Animation ─────────────────────────────────────────────────
 
-  async previewPlay(): Promise<void> {
+  async previewPlay(startPhaseIndex = 0, startPaused = false): Promise<void> {
     if (this._phases.length === 0) return;
     this.clearPathEditing();
     this.clearAnimatedPhaseObjects();
     this.ensureBallIndicator();
 
-    // Save the current editing positions so we can restore them after preview
     const savedPositions = captureTokenPositions(this.tokens);
     const savedBallCarrier = this.ballCarrierId();
 
-    // Hide current phase paths and shadow tokens during preview
     this.currentPhasePaths.forEach(p => p.fabricObjects.forEach(o => o.set({ visible: false })));
     this.clearShadowTokens();
 
-    // Reset all tokens to phase 0 starting positions
-    syncTokensToPhasePositions(this.tokens, this._phases[0].playerPositions);
+    const startPhase = this._phases[startPhaseIndex];
+    syncTokensToPhasePositions(this.tokens, startPhase.playerPositions);
 
-    const initialSchedule = this.buildPhasePathSchedule(this._phases[0]);
-    this.positionBallAtPhaseStart(this._phases[0], initialSchedule);
+    const initialSchedule = this.buildPhasePathSchedule(startPhase);
+    this.positionBallAtPhaseStart(startPhase, initialSchedule);
     this.fabricCanvas.renderAll();
 
-    this.animState.set('playing');
+    this.animState.set(startPaused ? 'paused' : 'playing');
+    this.animPhaseIndex = startPhaseIndex;
+    this.animPhase = startPhase;
+    this.animScheduledPaths = initialSchedule;
 
     try {
       for (const [i, phase] of this._phases.entries()) {
-        if (!this.isPlaying()) break;
+        if (i < startPhaseIndex) continue;
+
+        // Wait while paused between phases
+        while (this.animState() === 'paused') {
+          await new Promise<void>(r => setTimeout(r, 50));
+        }
+        if (this.animState() === 'idle') break;
+
+        this.animPhaseIndex = i;
         this.animProgress.set(i / this._phases.length);
         await this.animatePhase(phase);
       }
-      // Brief pause at the end so user can see final state
-      if (this.isPlaying()) {
+
+      // Brief hold at the end so user can see final state
+      while (this.animState() === 'paused') {
+        await new Promise<void>(r => setTimeout(r, 50));
+      }
+      if (this.animState() !== 'idle') {
         this.animProgress.set(1);
-        await new Promise(r => setTimeout(r, 600));
+        await new Promise<void>(r => setTimeout(r, 600));
       }
     } finally {
+      const restartPhase = this.pendingRestartPhase;
+      this.pendingRestartPhase = null;
+
       this.animState.set('idle');
       this.animProgress.set(0);
+      this.animTick = null;
+      this.animPhase = null;
+      this.animScheduledPaths = [];
 
-      // Restore saved editing positions
       restoreSavedTokenPositions(this.tokens, savedPositions);
       this.ballCarrierId.set(savedBallCarrier);
       this.clearAnimatedPhaseObjects();
       this.updateBallIndicator();
 
-      // Restore current phase paths visibility and shadow tokens
       this.currentPhasePaths.forEach(p => p.fabricObjects.forEach(o => o.set({ visible: true })));
       this.refreshShadowTokens();
       this.fabricCanvas.renderAll();
+
+      if (restartPhase !== null) {
+        setTimeout(() => this.previewPlay(restartPhase, true), 50);
+      }
     }
   }
 
@@ -1198,20 +1231,23 @@ export class PlayEditorComponent implements OnDestroy {
     return new Promise(resolve => {
       this.activeAnimResolve = resolve;
       const scheduledPaths = this.buildPhasePathSchedule(phase);
+      this.animPhase = phase;
+      this.animScheduledPaths = scheduledPaths;
       this.ensureBallIndicator();
 
-      // Position all tokens at their starting positions for this phase
       syncTokensToPhasePositions(this.tokens, phase.playerPositions);
-
-      // Position ball indicator at starting location
       this.positionBallAtPhaseStart(phase, scheduledPaths);
       this.updateAnimatedPhaseObjects(phase, scheduledPaths, 0);
       this.fabricCanvas.renderAll();
 
-      // Brief pause at start so the user can see the initial setup
       const PRE_DELAY = 300;
+      const duration = this.ANIM_DURATION / this.animSpeed();
+      this.animDuration = duration;
+      this.animElapsed = 0;
+      this.animLastNow = null;
+
       setTimeout(() => {
-        if (!this.isPlaying()) {
+        if (this.animState() === 'idle') {
           this.clearAnimatedPhaseObjects();
           this.fabricCanvas.renderAll();
           this.activeAnimResolve = null;
@@ -1219,43 +1255,52 @@ export class PlayEditorComponent implements OnDestroy {
           return;
         }
 
-        const duration = this.ANIM_DURATION / this.animSpeed();
-        const start = performance.now();
-
-        const tick = (now: number) => {
-          if (!this.isPlaying()) {
-            this.activeAnimResolve = null;
-            resolve();
-            return;
-          }
-          const t = Math.min((now - start) / duration, 1);
-
-          // Animate player movement (skip pass & shoot — only the ball moves for those)
+        const renderAt = (t: number) => {
           syncTokensToResolvedPositions(
             this.tokens,
             token => this.getPlayerPositionAtTime(token.id, phase, scheduledPaths, t),
           );
-
-          // Animate ball
           this.animateBallForPhase(phase, scheduledPaths, t);
           this.updateAnimatedPhaseObjects(phase, scheduledPaths, t);
-
           this.fabricCanvas.renderAll();
+        };
+
+        const tick: FrameRequestCallback = (now) => {
+          const state = this.animState();
+
+          if (state === 'idle') {
+            this.activeAnimResolve = null;
+            resolve();
+            return;
+          }
+
+          if (state === 'paused') {
+            this.animLastNow = null; // reset delta so resume doesn't jump
+            return; // freeze — no next frame
+          }
+
+          if (this.animLastNow !== null) {
+            this.animElapsed += now - this.animLastNow;
+          }
+          this.animLastNow = now;
+
+          const t = Math.min(this.animElapsed / duration, 1);
+          renderAt(t);
 
           if (t < 1) {
             this.animFrameId = requestAnimationFrame(tick);
           } else {
-            // Snap tokens to exact final positions for precision
-            syncTokensToResolvedPositions(
-              this.tokens,
-              token => this.getPlayerPositionAtTime(token.id, phase, scheduledPaths, 1),
-            );
+            renderAt(1);
             this.clearAnimatedPhaseObjects();
             this.fabricCanvas.renderAll();
+            this.animElapsed = 0;
+            this.animLastNow = null;
             this.activeAnimResolve = null;
             resolve();
           }
         };
+
+        this.animTick = tick;
         this.animFrameId = requestAnimationFrame(tick);
       }, PRE_DELAY);
     });
@@ -1280,6 +1325,9 @@ export class PlayEditorComponent implements OnDestroy {
       cancelAnimationFrame(this.animFrameId);
       this.animFrameId = null;
     }
+    this.animTick = null;
+    this.animElapsed = 0;
+    this.animLastNow = null;
     this.clearAnimatedPhaseObjects();
     if (this.activeAnimResolve) {
       const resolve = this.activeAnimResolve;
@@ -1288,6 +1336,51 @@ export class PlayEditorComponent implements OnDestroy {
     }
     this.animState.set('idle');
     this.animProgress.set(0);
+  }
+
+  togglePause(): void {
+    if (this.animState() === 'playing') {
+      this.animState.set('paused');
+      // tick detects 'paused' on next frame and stops itself
+    } else if (this.animState() === 'paused') {
+      this.animState.set('playing');
+      this.animLastNow = null; // prevent elapsed jump on resume
+      if (this.animTick) {
+        this.animFrameId = requestAnimationFrame(this.animTick);
+      }
+    }
+  }
+
+  rollbackPhase(): void {
+    if (!this.isAnimating()) return;
+
+    const REWIND_THRESHOLD_MS = 400;
+
+    if (this.animElapsed > REWIND_THRESHOLD_MS || this.animPhaseIndex === 0) {
+      // Rewind to start of current phase, paused
+      this.animElapsed = 0;
+      this.animLastNow = null;
+      if (this.animState() === 'playing') {
+        this.animState.set('paused');
+      }
+      if (this.animPhase) {
+        syncTokensToPhasePositions(this.tokens, this.animPhase.playerPositions);
+        this.positionBallAtPhaseStart(this.animPhase, this.animScheduledPaths);
+        this.updateAnimatedPhaseObjects(this.animPhase, this.animScheduledPaths, 0);
+        this.fabricCanvas.renderAll();
+      }
+    } else {
+      // Step back to previous phase — stop current play and restart from there
+      this.pendingRestartPhase = this.animPhaseIndex - 1;
+      if (this.animFrameId) {
+        cancelAnimationFrame(this.animFrameId);
+        this.animFrameId = null;
+      }
+      const resolve = this.activeAnimResolve;
+      this.activeAnimResolve = null;
+      this.animState.set('idle'); // triggers previewPlay loop to break
+      resolve?.();
+    }
   }
 
   // ── Save / Load ───────────────────────────────────────────────

@@ -50,6 +50,18 @@ export const routes: Routes = [
       import('./features/playbook/play-editor/play-editor.component').then(m => m.PlayEditorComponent),
   },
 
+  // Team — training sessions
+  {
+    path: 'teams/:teamId/training',
+    loadComponent: () =>
+      import('./features/training/training.component').then(m => m.TrainingComponent),
+  },
+  {
+    path: 'teams/:teamId/training/:sessionId/drill/:drillId',
+    loadComponent: () =>
+      import('./features/training/exercise-editor/exercise-editor.component').then(m => m.ExerciseEditorComponent),
+  },
+
   // Catch-all fallback
   { path: '**', redirectTo: 'teams' },
 ];

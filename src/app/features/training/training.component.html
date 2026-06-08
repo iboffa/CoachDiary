@@ -1,0 +1,281 @@
+<div class="training-page">
+
+  <!-- Header -->
+  <div class="page-header">
+    <div class="header-left">
+      <button class="btn btn--ghost" (click)="back()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 19l-7-7m0 0l7-7m-7 7h18" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Teams
+      </button>
+      <h1>Training Sessions</h1>
+    </div>
+    <button class="btn btn--primary" (click)="newSession()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 4v16m8-8H4" stroke-linecap="round"/></svg>
+      New Session
+    </button>
+  </div>
+
+  <!-- Body -->
+  <div class="training-body">
+
+    <!-- Left: session list -->
+    <aside class="sessions-panel">
+
+      @if (isEmpty()) {
+        <div class="empty-state">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6.75 3v1.5M17.25 3v1.5M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <p>No sessions yet</p>
+          <button class="btn btn--ghost" (click)="newSession()">Create first session</button>
+        </div>
+      }
+
+      @for (session of sessions(); track session.id) {
+        <div class="session-card"
+             [class.selected]="showForm() && editingSession.id === session.id"
+             (click)="selectSession(session)">
+          <div class="session-card__date">{{ session.date | date:'MMM d' }}</div>
+          <div class="session-card__info">
+            <span class="name">{{ session.name }}</span>
+            @if (session.focus) {
+              <span class="focus">{{ session.focus }}</span>
+            }
+            @if (drillsInfo(session).count > 0) {
+              <span class="drills-meta">
+                {{ drillsInfo(session).count }} drill{{ drillsInfo(session).count !== 1 ? 's' : '' }}
+                &middot; {{ formatDuration(drillsInfo(session).minutes) }}
+              </span>
+            }
+          </div>
+          <div class="session-card__right">
+            <button class="card-icon-btn" title="Save as Template" (click)="saveAsTemplate(session, $event)">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M17.593 3.322c1.1.128 1.907 1.077 1.907 2.185V21L12 17.25 4.5 21V5.507c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0111.186 0z" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+            <button class="del-btn" title="Delete session" (click)="deleteSession(session.id!, $event)">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+          </div>
+        </div>
+      }
+
+      <!-- Templates section -->
+      @if (templates().length > 0) {
+        <div class="section-divider">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17.593 3.322c1.1.128 1.907 1.077 1.907 2.185V21L12 17.25 4.5 21V5.507c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0111.186 0z" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Templates
+        </div>
+        @for (tpl of templates(); track tpl.id) {
+          <div class="session-card session-card--template"
+               [class.selected]="showForm() && editingSession.id === tpl.id"
+               (click)="selectSession(tpl)">
+            <div class="session-card__info" style="padding-left: 4px;">
+              <span class="name">{{ tpl.name }}</span>
+              @if (tpl.focus) {
+                <span class="focus">{{ tpl.focus }}</span>
+              }
+              @if (drillsInfo(tpl).count > 0) {
+                <span class="drills-meta">
+                  {{ drillsInfo(tpl).count }} drill{{ drillsInfo(tpl).count !== 1 ? 's' : '' }}
+                  &middot; {{ formatDuration(drillsInfo(tpl).minutes) }}
+                </span>
+              }
+            </div>
+            <div class="session-card__right">
+              <button class="btn btn--primary btn--sm" (click)="useTemplate(tpl, $event)">Use</button>
+              <button class="del-btn" title="Delete template" (click)="deleteTemplate(tpl.id!, $event)">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </button>
+            </div>
+          </div>
+        }
+      }
+    </aside>
+
+    <!-- Right: form or empty state -->
+    @if (showForm()) {
+      <section class="session-form">
+
+        <div class="form-topbar">
+          <div class="form-topbar__title">
+            <h2>{{ isNew() ? 'New Session' : (editingSession.is_template ? 'Edit Template' : 'Edit Session') }}</h2>
+            @if (editingSession.is_template) {
+              <span class="tpl-badge">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M17.593 3.322c1.1.128 1.907 1.077 1.907 2.185V21L12 17.25 4.5 21V5.507c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0111.186 0z" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                Template
+              </span>
+            }
+          </div>
+          <div class="form-topbar__actions">
+            <button class="btn btn--ghost" (click)="cancelEdit()">Cancel</button>
+            <button class="btn btn--primary" (click)="save()" [disabled]="saving() || !editingSession.name?.trim()">
+              {{ saving() ? 'Saving…' : 'Save' }}
+            </button>
+          </div>
+        </div>
+
+        <!-- Meta fields -->
+        <div class="form-row">
+          <div class="form-group" style="flex:2">
+            <label>Session Name</label>
+            <input type="text" [(ngModel)]="editingSession.name" placeholder="e.g. Pre-game walkthrough"/>
+          </div>
+          <div class="form-group">
+            <label>Date</label>
+            <input type="date" [(ngModel)]="editingSession.date"/>
+          </div>
+          <div class="form-group dur-group">
+            <label>Duration (min)</label>
+            <input type="number"
+                   [ngModel]="editingSession.duration_minutes"
+                   (ngModelChange)="onScheduledMinutesChange(+$event)"
+                   placeholder="90" min="1"/>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Focus</label>
+          <input type="text" [(ngModel)]="editingSession.focus" placeholder="e.g. Defensive rotations, pick-and-roll coverage"/>
+        </div>
+
+        <div class="form-group">
+          <label>Notes</label>
+          <textarea rows="3" [(ngModel)]="editingSession.notes" placeholder="Session notes, observations, reminders…"></textarea>
+        </div>
+
+        <!-- Drills section -->
+        <div class="drills-section">
+          <div class="drills-header">
+            <h3>Drills</h3>
+            @if (editingDrills().length > 0) {
+              @if (durationStatus(); as ds) {
+                <span class="drill-total" [class]="'drill-total--' + ds.state">
+                  {{ ds.total }} / {{ ds.scheduled }} min
+                  @if (ds.state === 'over') { <span class="dur-warn">+{{ ds.diff }}m over</span> }
+                  @if (ds.state === 'tight') { <span class="dur-warn dur-warn--tight">~full</span> }
+                </span>
+              } @else {
+                <span class="drill-total">{{ totalDrillMinutes() }} min total</span>
+              }
+            }
+            <div class="drills-header__actions">
+              <button class="btn btn--ghost btn--sm" [class.active]="showLibrary()" (click)="showLibrary.set(!showLibrary())" title="Drill library">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                Library
+              </button>
+              <button class="btn btn--ghost btn--sm" (click)="addDrill()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 4v16m8-8H4" stroke-linecap="round"/></svg>
+                Add Drill
+              </button>
+            </div>
+          </div>
+
+          <!-- Drill library panel -->
+          @if (showLibrary()) {
+            <div class="drill-library">
+              <div class="library-title">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                Saved Drills
+              </div>
+              @if (savedDrills().length === 0) {
+                <p class="library-empty">No saved drills yet — bookmark a drill below to add it here.</p>
+              }
+              @for (sd of savedDrills(); track sd.id) {
+                <div class="library-item">
+                  <div class="library-item__info">
+                    <span class="li-name">{{ sd.name }}</span>
+                    <span class="li-meta">{{ sd.duration_minutes }}min{{ sd.description ? ' · ' + sd.description : '' }}</span>
+                  </div>
+                  <button class="li-add-btn" (click)="addFromLibrary(sd)" title="Add to session">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 4v16m8-8H4" stroke-linecap="round"/></svg>
+                  </button>
+                  <button class="li-del-btn" (click)="removeFromLibrary(sd.id!, $event)" title="Remove from library">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12" stroke-linecap="round"/></svg>
+                  </button>
+                </div>
+              }
+            </div>
+          }
+
+          @if (editingDrills().length === 0) {
+            <p class="drills-empty">No drills yet — add some to structure your session.</p>
+          }
+
+          @for (drill of editingDrills(); track drill.id; let i = $index; let last = $last) {
+            <div class="drill-card"
+                 [class.drill-card--dragging]="dragIndex() === i"
+                 [class.drill-card--drag-over]="dragOverIndex() === i && dragIndex() !== i"
+                 [attr.draggable]="true"
+                 (dragstart)="onDrillDragStart(i)"
+                 (dragover)="onDrillDragOver(i, $event)"
+                 (drop)="onDrillDrop(i, $event)"
+                 (dragend)="onDrillDragEnd()">
+
+              <!-- Drag handle + order buttons -->
+              <div class="drill-order-col">
+                <div class="drag-handle" title="Drag to reorder">
+                  <svg viewBox="0 0 24 24" fill="currentColor">
+                    <circle cx="9" cy="6"  r="1.5"/><circle cx="15" cy="6"  r="1.5"/>
+                    <circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/>
+                    <circle cx="9" cy="18" r="1.5"/><circle cx="15" cy="18" r="1.5"/>
+                  </svg>
+                </div>
+                <button class="order-btn" [disabled]="i === 0" (click)="moveDrillUp(i)" title="Move up">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 15l-6-6-6 6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </button>
+                <button class="order-btn" [disabled]="last" (click)="moveDrillDown(i)" title="Move down">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </button>
+              </div>
+
+              <!-- Court preview (clickable to open editor) -->
+              <button class="drill-preview-col"
+                      [disabled]="!editingSession.id"
+                      [title]="editingSession.id ? 'Open exercise editor' : 'Save session first to design'"
+                      (click)="editingSession.id && openExercise(editingSession.id!, drill.id)">
+                <app-drill-preview [canvasState]="drill.canvas_state"/>
+              </button>
+
+              <!-- Fields -->
+              <div class="drill-fields">
+                <div class="drill-fields-top">
+                  <input class="drill-name" type="text"
+                         [ngModel]="drill.name"
+                         (ngModelChange)="updateDrill(drill.id, 'name', $event)"
+                         placeholder="Drill name"/>
+                  <div class="dur-field">
+                    <input class="drill-dur" type="number"
+                           [ngModel]="drill.duration_minutes"
+                           (ngModelChange)="updateDrill(drill.id, 'duration_minutes', +$event)"
+                           placeholder="15" min="1"/>
+                    <span class="dur-label">min</span>
+                  </div>
+                </div>
+                <textarea class="drill-desc"
+                          rows="2"
+                          [ngModel]="drill.description"
+                          (ngModelChange)="updateDrill(drill.id, 'description', $event)"
+                          placeholder="Description (optional)"></textarea>
+                <div class="drill-fields-actions">
+                  <button class="bookmark-btn" [class.saved]="isDrillSaved(drill.name)"
+                          [title]="isDrillSaved(drill.name) ? 'Update in library' : 'Save to library'"
+                          (click)="saveToLibrary(drill)">
+                    <svg viewBox="0 0 24 24" [attr.fill]="isDrillSaved(drill.name) ? 'currentColor' : 'none'" stroke="currentColor" stroke-width="2">
+                      <path d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                  </button>
+                  <button class="btn btn--danger btn--sm del-drill" (click)="removeDrill(drill.id)" title="Remove drill">✕</button>
+                </div>
+              </div>
+            </div>
+          }
+        </div>
+
+      </section>
+    } @else {
+      <div class="no-selection empty-state">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2"><path d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25zM6.75 12h.008v.008H6.75V12zm0 3h.008v.008H6.75V15zm0 3h.008v.008H6.75V18z" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <p>Select a session or create a new one</p>
+      </div>
+    }
+
+  </div>
+</div>

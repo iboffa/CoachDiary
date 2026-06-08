@@ -75,16 +75,27 @@ export interface Drill {
   name: string;
   duration_minutes: number;
   description?: string;
+  canvas_state?: string;
+}
+
+export interface SavedDrill {
+  id?: number;
+  name: string;
+  duration_minutes: number;
+  description?: string;
+  created_at?: string;
 }
 
 export interface TrainingSession {
   id?: number;
+  team_id?: number;
   name: string;
   date?: string;
   duration_minutes?: number;
   focus?: string;
   notes?: string;
   drills: string;
+  is_template?: boolean;
   created_at?: string;
   updated_at?: string;
 }

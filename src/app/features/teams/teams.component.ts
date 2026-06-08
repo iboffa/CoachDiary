@@ -32,6 +32,10 @@ export class TeamsComponent {
     this.router.navigate(['/teams', id, 'playbook']);
   }
 
+  openTraining(id: number): void {
+    this.router.navigate(['/teams', id, 'training']);
+  }
+
   openNewForm(): void {
     this.editingTeam = {};
     this.showForm.set(true);

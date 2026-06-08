@@ -4,16 +4,11 @@
   <header class="editor-topbar">
     <button class="btn btn--ghost" (click)="back()">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 19l-7-7m0 0l7-7m-7 7h18" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      Playbook
+      Session
     </button>
 
-    <div class="play-meta">
-      <input class="play-name-input" [ngModel]="playName()" (ngModelChange)="playName.set($event)" placeholder="Play name"/>
-      <select class="category-select" [ngModel]="playCat()" (ngModelChange)="playCat.set($event)">
-        @for (cat of categories; track cat) {
-          <option [value]="cat">{{ cat | titlecase }}</option>
-        }
-      </select>
+    <div class="drill-meta">
+      <input class="drill-name-input" [ngModel]="drillName()" (ngModelChange)="drillName.set($event)" placeholder="Drill name"/>
     </div>
 
     <div class="court-toggle">
@@ -22,22 +17,6 @@
     </div>
 
     <div class="topbar-actions">
-      <button class="btn btn--ghost" (click)="exportPdf()" [disabled]="!canPreview()">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m.75 12l3 3m0 0l3-3m-3 3v-6m-1.5-9H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        PDF
-      </button>
-      <button class="btn btn--ghost" (click)="exportVideo()" [disabled]="!canPreview()">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M15.75 10.5l4.72-4.72a.75.75 0 011.28.53v11.38a.75.75 0 01-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 002.25-2.25v-9a2.25 2.25 0 00-2.25-2.25h-9A2.25 2.25 0 002.25 7.5v9a2.25 2.25 0 002.25 2.25z" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        Video
-      </button>
-      <button class="btn btn--ghost" (click)="duplicatePlay()" [disabled]="duplicating()" title="Duplicate this play">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 01-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 011.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 00-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 01-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 00-3.375-3.375h-1.5a1.125 1.125 0 01-1.125-1.125v-1.5a3.375 3.375 0 00-3.375-3.375H9.75" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        {{ duplicating() ? 'Copying…' : 'Duplicate' }}
-      </button>
-      <button class="btn btn--ghost" (click)="saveAsTemplate()" [disabled]="savingTemplate()" title="Save a copy as a reusable template">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17.593 3.322c1.1.128 1.907 1.077 1.907 2.185V21L12 17.25 4.5 21V5.507c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0111.186 0z" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        {{ savingTemplate() ? 'Saving…' : 'Save as Template' }}
-      </button>
       <button class="btn btn--primary" (click)="save()" [disabled]="saving()">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round"/></svg>
         {{ saving() ? 'Saving…' : 'Save' }}
@@ -51,18 +30,27 @@
     <aside class="tool-panel">
       <div class="tool-group">
         <span class="tool-group__label">Tools</span>
-        <button class="tool-btn" [class.active]="activeTool() === 'select'" (click)="setTool('select')" title="Select / Move players">
+        <button class="tool-btn" [class.active]="activeTool() === 'select'" (click)="setTool('select')" title="Select / Move tokens">
           <svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 0l16 12-7 1-4 8z"/></svg>
         </button>
-        <button class="tool-btn erase" [class.active]="activeTool() === 'erase'" (click)="setTool('erase')" title="Erase player or path">
+        <button class="tool-btn erase" [class.active]="activeTool() === 'erase'" (click)="setTool('erase')" title="Erase token or path">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 20H7L3 16l9.5-9.5a2 2 0 012.83 0l4.67 4.67a2 2 0 010 2.83L20 14" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </button>
       </div>
 
       <div class="tool-group">
         <span class="tool-group__label">Add</span>
+        <button class="tool-btn offense" (click)="addOffensePlayer()" title="Add offense player">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><text x="12" y="16" text-anchor="middle" font-size="9" fill="currentColor" stroke="none" font-weight="bold">O</text></svg>
+        </button>
         <button class="tool-btn defense" (click)="addDefensePlayer()" title="Add defender">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="9"/><text x="12" y="16" text-anchor="middle" font-size="9" fill="currentColor" stroke="none" font-weight="bold">X</text></svg>
+        </button>
+        <button class="tool-btn coach" (click)="addCoachPlayer()" title="Add coach">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><text x="12" y="16" text-anchor="middle" font-size="9" fill="currentColor" stroke="none" font-weight="bold">C</text></svg>
+        </button>
+        <button class="tool-btn cone" (click)="addCone()" title="Add cone">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 4L20 20H4z" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </button>
       </div>
 
@@ -85,7 +73,7 @@
         </div>
       } @else if (pendingPassFrom()) {
         <div class="draw-hint">
-          Select receiver — click on a teammate to pass the ball
+          Select receiver — click on a player to pass the ball
         </div>
       } @else if (pathSelected()) {
         <div class="draw-hint">
@@ -110,11 +98,6 @@
         </button>
       </div>
 
-      <div class="form-group" style="padding: 14px; margin-bottom: 0;">
-        <label>Description</label>
-        <textarea rows="3" [ngModel]="playDesc()" (ngModelChange)="playDesc.set($event)" placeholder="Describe the play..."></textarea>
-      </div>
-
       @if (phases.length > 0) {
         <div class="phases-history">
           <div class="phases-history__title">Recorded phases</div>
@@ -129,6 +112,8 @@
       <div class="legend" style="padding: 14px 14px 0;">
         <div class="legend-item offense"><span class="dot"></span> Offense</div>
         <div class="legend-item defense"><span class="dot"></span> Defense</div>
+        <div class="legend-item coach"><span class="dot"></span> Coach</div>
+        <div class="legend-item cone"><span class="dot"></span> Cone</div>
       </div>
 
       <div class="action-legend">
@@ -164,7 +149,7 @@
     }
 
     @if (!isAnimating()) {
-      <button class="anim-btn play" (click)="previewPlay()" [disabled]="!canPreview()" title="Preview full play">
+      <button class="anim-btn play" (click)="previewPlay()" [disabled]="!canPreview()" title="Preview exercise">
         <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 4l14 8-14 8z"/></svg>
       </button>
     } @else {
@@ -207,18 +192,13 @@
        [style.top.px]="contextMenu()!.clientY - 8"
        (click)="$event.stopPropagation()">
 
-    @if (!contextMenu()!.isBallCarrier) {
-      <button class="ctx-btn give-ball" (click)="setBallCarrier(contextMenu()!.playerId)">
-        <span class="ctx-icon">&#9679;</span> Give Ball
-      </button>
-      <div class="ctx-divider"></div>
-      <button class="ctx-btn cut" (click)="selectAction('cut')">
-        <span class="ctx-icon">&#8599;</span> Cut
-      </button>
-      <button class="ctx-btn screen" (click)="selectAction('screen')">
-        <span class="ctx-icon">&#8869;</span> Screen
-      </button>
-    } @else {
+    <button class="ctx-btn give-ball" (click)="toggleBallCarrier(contextMenu()!.playerId)">
+      <span class="ctx-icon">&#9679;</span>
+      {{ contextMenu()!.isBallCarrier ? 'Remove Ball' : 'Give Ball' }}
+    </button>
+    <div class="ctx-divider"></div>
+
+    @if (contextMenu()!.isBallCarrier) {
       <button class="ctx-btn dribble" (click)="selectAction('dribble')">
         <span class="ctx-icon">&#8594;</span> Dribble
       </button>
@@ -233,6 +213,13 @@
           <span class="ctx-icon">&#8644;</span> Hand-Off
         </button>
       }
+    } @else {
+      <button class="ctx-btn cut" (click)="selectAction('cut')">
+        <span class="ctx-icon">&#8599;</span> Cut
+      </button>
+      <button class="ctx-btn screen" (click)="selectAction('screen')">
+        <span class="ctx-icon">&#8869;</span> Screen
+      </button>
     }
 
     @if (canRemovePlayerPass(contextMenu()!.playerId) || canRemovePlayerShoot(contextMenu()!.playerId)) {
