@@ -3,7 +3,7 @@ import { Injectable } from '@angular/core';
 import {
   Player, PlayerNote, Play, PlaySummary,
   TrainingSession, SeasonPlan, GameNote,
-  Team, Opponent, OpponentPlayer, OpponentNote, SavedDrill,
+  Team, TeamNote, Opponent, OpponentPlayer, OpponentNote, SavedDrill,
 } from '../../shared/models/models';
 
 class CoachDiaryDb extends Dexie {
@@ -15,6 +15,7 @@ class CoachDiaryDb extends Dexie {
   seasonPlans!: Table<SeasonPlan, number>;
   gameNotes!: Table<GameNote, number>;
   teams!: Table<Team, number>;
+  teamNotes!: Table<TeamNote, number>;
   opponents!: Table<Opponent, number>;
   opponentNotes!: Table<OpponentNote, number>;
   opponentPlayers!: Table<OpponentPlayer, number>;
@@ -43,6 +44,9 @@ class CoachDiaryDb extends Dexie {
     this.version(4).stores({
       savedDrills: '++id, name',
     });
+    this.version(5).stores({
+      teamNotes: '++id, team_id, date',
+    });
   }
 }
 
@@ -70,6 +74,24 @@ export class DbService {
 
   deleteTeam(id: number): Promise<void> {
     return this.db.teams.delete(id);
+  }
+
+  // ── Team Notes ────────────────────────────────────────────────
+  listTeamNotes(teamId: number): Promise<TeamNote[]> {
+    return this.db.teamNotes.where('team_id').equals(teamId).reverse().sortBy('date');
+  }
+
+  async saveTeamNote(note: TeamNote): Promise<number> {
+    const now = new Date().toISOString();
+    if (note.id) {
+      await this.db.teamNotes.update(note.id, note);
+      return note.id;
+    }
+    return this.db.teamNotes.add({ ...note, created_at: now });
+  }
+
+  deleteTeamNote(id: number): Promise<void> {
+    return this.db.teamNotes.delete(id);
   }
 
   // ── Opponents ─────────────────────────────────────────────────

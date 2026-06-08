@@ -1,0 +1,42 @@
+<div class="team-notes-page">
+  <div class="page-header">
+    <div class="page-header__title">
+      <h1>Journal</h1>
+      <p>{{ team()?.name }}</p>
+    </div>
+  </div>
+
+  <div class="journal-body">
+    <div class="add-entry-card">
+      <div class="add-entry-card__date-row">
+        <input type="date" class="form-control form-control--sm" [(ngModel)]="newEntry.date"/>
+      </div>
+      <textarea
+        class="add-entry-card__textarea"
+        placeholder="Write a note — goals, observations, strategy thoughts…"
+        [(ngModel)]="newEntry.content"
+      ></textarea>
+      <div class="add-entry-card__footer">
+        <button class="btn btn--primary btn--sm" (click)="addEntry()">Save Entry</button>
+      </div>
+    </div>
+
+    @if (entries().length === 0) {
+      <div class="empty-hint">No journal entries yet. Write your first one above.</div>
+    }
+
+    <div class="entries-list">
+      @for (entry of entries(); track entry.id) {
+        <div class="entry-card">
+          <div class="entry-card__header">
+            <span class="entry-card__date">{{ entry.date | date:'EEEE, MMMM d, y' }}</span>
+            <button class="entry-card__delete" (click)="deleteEntry(entry.id!)" title="Delete entry">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 18L18 6M6 6l12 12" stroke-linecap="round"/></svg>
+            </button>
+          </div>
+          <p class="entry-card__content">{{ entry.content }}</p>
+        </div>
+      }
+    </div>
+  </div>
+</div>
