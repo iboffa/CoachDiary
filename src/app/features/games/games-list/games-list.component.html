@@ -1,0 +1,50 @@
+<div class="games-list-page">
+  <div class="page-header">
+    <div class="header-left">
+      <button class="btn btn--ghost" (click)="back()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 19l-7-7m0 0l7-7m-7 7h18" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Teams
+      </button>
+      <h1>Games</h1>
+    </div>
+    <button class="btn btn--primary" (click)="addGame()" data-testid="add-game-btn">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 4v16m8-8H4" stroke-linecap="round"/></svg>
+      Add Game
+    </button>
+  </div>
+
+  @if (isEmpty()) {
+    <div class="empty-state">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2">
+        <circle cx="12" cy="12" r="10"/>
+        <path d="M12 2a10 10 0 010 20M12 2a10 10 0 000 20M2 12h20" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M4.93 4.93a10 10 0 0014.14 14.14M4.93 19.07A10 10 0 0119.07 4.93" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <p>No games yet. Add your first game.</p>
+      <button class="btn btn--primary" (click)="addGame()">Add Game</button>
+    </div>
+  }
+
+  <div class="games-grid">
+    @for (game of games(); track game.id) {
+      <div class="game-card" (click)="openGame(game.id!)" data-testid="game-card">
+        <div class="game-card__date">{{ game.date | date:'MMM d, y' }}</div>
+        <div class="game-card__body">
+          <div class="game-card__opponent">{{ game.opponent }}</div>
+          <div class="game-card__meta">
+            <span class="badge" [class.badge--home]="game.homeAway === 'home'" [class.badge--away]="game.homeAway === 'away'">
+              {{ game.homeAway === 'home' ? 'Home' : 'Away' }}
+            </span>
+            <span class="game-card__score">{{ score(game) }}</span>
+          </div>
+          @if (game.notes) {
+            <p class="game-card__notes">{{ game.notes }}</p>
+          }
+        </div>
+        <div class="game-card__arrow">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8.25 4.5l7.5 7.5-7.5 7.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+      </div>
+    }
+  </div>
+</div>

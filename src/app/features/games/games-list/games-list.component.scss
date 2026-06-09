@@ -1,0 +1,149 @@
+.games-list-page {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow-y: auto;
+}
+
+.page-header {
+  .header-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+}
+
+// ── Empty state ───────────────────────────────────────────────
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 64px 16px;
+  text-align: center;
+
+  svg {
+    width: 48px;
+    height: 48px;
+    color: #374151;
+  }
+
+  p {
+    font-size: 14px;
+    font-weight: 500;
+    color: #6b7280;
+    margin: 0;
+  }
+}
+
+// ── Games grid ────────────────────────────────────────────────
+
+.games-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 0 24px 24px;
+}
+
+.game-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 14px 16px;
+  background: #161b27;
+  border: 1px solid #2a2f3e;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s;
+
+  &:hover {
+    background: #1e2536;
+    border-color: #3a4155;
+  }
+
+  &__date {
+    font-size: 12px;
+    color: #60a5fa;
+    font-weight: 600;
+    white-space: nowrap;
+    min-width: 80px;
+    flex-shrink: 0;
+    padding-top: 2px;
+  }
+
+  &__body {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  &__opponent {
+    font-size: 14px;
+    font-weight: 600;
+    color: #e8eaf0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &__meta {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  &__score {
+    font-size: 13px;
+    font-weight: 600;
+    color: #c8d0e0;
+    font-variant-numeric: tabular-nums;
+  }
+
+  &__notes {
+    font-size: 12px;
+    color: #6b7280;
+    margin: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &__arrow {
+    display: flex;
+    align-items: center;
+    color: #374151;
+    flex-shrink: 0;
+
+    svg {
+      width: 16px;
+      height: 16px;
+    }
+  }
+}
+
+// ── Badges ────────────────────────────────────────────────────
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+
+  &--home {
+    background: #1a3a2a;
+    color: #4ade80;
+  }
+
+  &--away {
+    background: #1e2d4a;
+    color: #60a5fa;
+  }
+}

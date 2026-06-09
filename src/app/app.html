@@ -81,6 +81,16 @@
             <span>Season</span>
           </a>
         </li>
+        <li>
+          <a [routerLink]="['/teams', currentTeamId(), 'games']" routerLinkActive="active" class="nav-link">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <circle cx="12" cy="12" r="10"/>
+              <path d="M12 2a10 10 0 010 20M12 2a10 10 0 000 20M2 12h20" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M4.93 4.93a10 10 0 0014.14 14.14M4.93 19.07A10 10 0 0119.07 4.93" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <span>Games</span>
+          </a>
+        </li>
       </ul>
     }
 
