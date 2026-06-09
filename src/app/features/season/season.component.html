@@ -1,0 +1,137 @@
+<div class="season-page">
+
+  <div class="page-header">
+    <div class="header-left">
+      <button class="btn btn--ghost" (click)="back()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 19l-7-7m0 0l7-7m-7 7h18" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Teams
+      </button>
+      <h1>Season Planning</h1>
+    </div>
+    <button class="btn btn--primary" (click)="newPlan()" data-testid="new-plan-btn">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 4v16m8-8H4" stroke-linecap="round"/></svg>
+      New Plan
+    </button>
+  </div>
+
+  <div class="season-body">
+    <aside class="plans-panel">
+
+      @if (isEmpty()) {
+        <div class="empty-state">
+          <p>No season plans yet</p>
+          <button class="btn btn--ghost" (click)="newPlan()">Create first plan</button>
+        </div>
+      }
+
+      @for (plan of plans(); track plan.id) {
+        <div class="plan-card"
+             [class.selected]="showForm() && editingPlan.id === plan.id"
+             (click)="selectPlan(plan)"
+             data-testid="plan-card">
+          <div class="plan-card__year">{{ plan.season_year }}</div>
+          <div class="plan-card__info">
+            <span class="name">{{ plan.name }}</span>
+            @if (plan.start_date || plan.end_date) {
+              <span class="dates">
+                {{ plan.start_date | date:'MMM yyyy' }}
+                @if (plan.end_date) { - {{ plan.end_date | date:'MMM yyyy' }} }
+              </span>
+            }
+            @if (goalCount(plan) > 0) {
+              <span class="goals-meta">
+                {{ goalCount(plan) }} goal{{ goalCount(plan) !== 1 ? 's' : '' }}
+                @if (doneCount(plan) > 0) { &middot; {{ doneCount(plan) }} done }
+              </span>
+            }
+          </div>
+          <button class="del-btn" title="Delete plan" (click)="deletePlan(plan.id!, $event)" data-testid="delete-plan-btn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+        </div>
+      }
+    </aside>
+
+    @if (showForm()) {
+      <section class="plan-form">
+
+        <div class="form-topbar">
+          <h2>{{ isNew() ? 'New Season Plan' : 'Edit Season Plan' }}</h2>
+          <div class="form-topbar__actions">
+            <button class="btn btn--ghost" (click)="cancelEdit()">Cancel</button>
+            <button class="btn btn--primary" (click)="save()" [disabled]="saving() || !editingPlan.name?.trim()" data-testid="save-plan-btn">
+              {{ saving() ? 'Saving...' : 'Save' }}
+            </button>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group" style="flex:2">
+            <label>Plan Name</label>
+            <input type="text" [(ngModel)]="editingPlan.name" placeholder="e.g. 2025-26 Season" data-testid="plan-name-input"/>
+          </div>
+          <div class="form-group">
+            <label>Season Year</label>
+            <input type="text" [(ngModel)]="editingPlan.season_year" placeholder="e.g. 2025-26" data-testid="season-year-input"/>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Start Date</label>
+            <input type="date" [(ngModel)]="editingPlan.start_date" data-testid="start-date-input"/>
+          </div>
+          <div class="form-group">
+            <label>End Date</label>
+            <input type="date" [(ngModel)]="editingPlan.end_date" data-testid="end-date-input"/>
+          </div>
+        </div>
+
+        <div class="goals-section">
+          <div class="goals-header">
+            <h3>Goals</h3>
+            <span class="goals-count">{{ editingGoals().length }}</span>
+            <button class="btn btn--ghost btn--sm" (click)="addGoal()" data-testid="add-goal-btn">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 4v16m8-8H4" stroke-linecap="round"/></svg>
+              Add Goal
+            </button>
+          </div>
+
+          @if (editingGoals().length === 0) {
+            <p class="goals-empty">No goals yet — what do you want to achieve this season?</p>
+          }
+
+          @for (goal of editingGoals(); track goal.id) {
+            <div class="goal-row" [class.goal-row--done]="goal.done" data-testid="goal-row">
+              <input type="checkbox"
+                     class="goal-check"
+                     [checked]="goal.done"
+                     (change)="toggleGoal(goal.id)"
+                     data-testid="goal-checkbox"/>
+              <input type="text"
+                     class="goal-text"
+                     [ngModel]="goal.text"
+                     (ngModelChange)="updateGoalText(goal.id, $event)"
+                     placeholder="Describe this goal…"
+                     data-testid="goal-text-input"/>
+              <input type="date"
+                     class="goal-deadline"
+                     [ngModel]="goal.deadline"
+                     (ngModelChange)="updateGoalDeadline(goal.id, $event)"
+                     title="Deadline (optional)"
+                     data-testid="goal-deadline-input"/>
+              <button class="del-btn goal-del-btn" title="Remove goal" (click)="removeGoal(goal.id)" data-testid="remove-goal-btn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 18L18 6M6 6l12 12" stroke-linecap="round"/></svg>
+              </button>
+            </div>
+          }
+        </div>
+
+      </section>
+    } @else {
+      <div class="no-selection empty-state">
+        <p>Select a plan or create a new one</p>
+      </div>
+    }
+  </div>
+</div>

@@ -131,14 +131,22 @@ export interface SeasonEvent {
   notes?: string;
 }
 
+export interface SeasonGoal {
+  id: string;
+  text: string;
+  done: boolean;
+  deadline?: string;
+}
+
 export interface SeasonPlan {
   id?: number;
+  team_id?: number;
   name: string;
   season_year?: string;
   start_date?: string;
   end_date?: string;
   goals?: string;
-  events: string;
+  events?: string;
   created_at?: string;
   updated_at?: string;
 }

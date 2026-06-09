@@ -58,6 +58,9 @@ class CoachDiaryDb extends Dexie {
     }).upgrade(tx => tx.table('plays').toCollection().modify(play => {
       delete (play as Record<string, unknown>)['category'];
     }));
+    this.version(7).stores({
+      seasonPlans: '++id, team_id, start_date',
+    });
   }
 }
 
@@ -314,7 +317,10 @@ export class DbService {
   }
 
   // ── Season plans ──────────────────────────────────────────────
-  listSeasonPlans(): Promise<SeasonPlan[]> {
+  listSeasonPlans(teamId?: number): Promise<SeasonPlan[]> {
+    if (teamId !== undefined) {
+      return this.db.seasonPlans.where('team_id').equals(teamId).reverse().sortBy('start_date');
+    }
     return this.db.seasonPlans.orderBy('start_date').reverse().toArray();
   }
 
