@@ -69,6 +69,13 @@ export const routes: Routes = [
       import('./features/training/exercise-editor/exercise-editor.component').then(m => m.ExerciseEditorComponent),
   },
 
+  // Team - season planning
+  {
+    path: 'teams/:teamId/season',
+    loadComponent: () =>
+      import('./features/season/season.component').then(m => m.SeasonComponent),
+  },
+
   // Catch-all fallback
   { path: '**', redirectTo: 'teams' },
 ];
