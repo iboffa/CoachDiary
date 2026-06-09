@@ -64,11 +64,11 @@
       <div class="modal__body">
         <div class="form-group">
           <label>Team Name</label>
-          <input type="text" class="form-control" placeholder="e.g. Lakers U18" [(ngModel)]="editingTeam.name" (keydown.enter)="saveTeam()"/>
+          <input type="text" class="form-control" placeholder="Team name" [(ngModel)]="editingTeam.name" (keydown.enter)="saveTeam()"/>
         </div>
         <div class="form-group">
           <label>Description <span class="optional">(optional)</span></label>
-          <input type="text" class="form-control" placeholder="e.g. 2024-25 season" [(ngModel)]="editingTeam.description"/>
+          <input type="text" class="form-control" placeholder="Description" [(ngModel)]="editingTeam.description"/>
         </div>
       </div>
       <div class="modal__footer">
