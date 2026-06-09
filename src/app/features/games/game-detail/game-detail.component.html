@@ -1,0 +1,89 @@
+<div class="game-detail-page">
+  <div class="page-header">
+    <div class="header-left">
+      <button class="btn btn--ghost" (click)="back()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 19l-7-7m0 0l7-7m-7 7h18" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Games
+      </button>
+      <h1>{{ isNew ? 'New Game' : 'Edit Game' }}</h1>
+    </div>
+    <div class="header-actions">
+      @if (!isNew) {
+        <button class="btn btn--danger" (click)="deleteGame()" data-testid="delete-game-btn">Delete</button>
+      }
+      <button
+        class="btn btn--primary"
+        (click)="save()"
+        [disabled]="saving() || !game.opponent?.trim()"
+        data-testid="save-game-btn">
+        {{ saving() ? 'Saving...' : 'Save' }}
+      </button>
+    </div>
+  </div>
+
+  <div class="game-form">
+    <div class="form-row">
+      <div class="form-group">
+        <label>Date</label>
+        <input type="date" [(ngModel)]="game.date" data-testid="game-date-input"/>
+      </div>
+      <div class="form-group" style="flex:2">
+        <label>Opponent</label>
+        <input type="text" [(ngModel)]="game.opponent" placeholder="Opponent name" data-testid="game-opponent-input"/>
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label>Home / Away</label>
+        <div class="toggle-group">
+          <button
+            class="toggle-btn"
+            [class.toggle-btn--active]="game.homeAway === 'home'"
+            (click)="game.homeAway = 'home'"
+            data-testid="home-btn">
+            Home
+          </button>
+          <button
+            class="toggle-btn"
+            [class.toggle-btn--active]="game.homeAway === 'away'"
+            (click)="game.homeAway = 'away'"
+            data-testid="away-btn">
+            Away
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label>Our Score</label>
+        <input
+          type="number"
+          min="0"
+          [(ngModel)]="game.scoreUs"
+          placeholder="—"
+          data-testid="score-us-input"/>
+      </div>
+      <div class="form-group">
+        <label>Their Score</label>
+        <input
+          type="number"
+          min="0"
+          [(ngModel)]="game.scoreThem"
+          placeholder="—"
+          data-testid="score-them-input"/>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>Notes</label>
+      <textarea
+        rows="5"
+        [(ngModel)]="game.notes"
+        placeholder="Post-game notes, key moments, areas to improve…"
+        data-testid="game-notes-input">
+      </textarea>
+    </div>
+  </div>
+</div>

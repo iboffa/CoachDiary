@@ -4,7 +4,7 @@ import {
   Player, PlayerNote, Play, PlaySummary,
   TrainingSession, SeasonPlan, GameNote,
   Team, TeamNote, Opponent, OpponentPlayer, OpponentNote, SavedDrill,
-  PlayCategory, DrillCategory,
+  PlayCategory, DrillCategory, Game,
 } from '../../shared/models/models';
 
 class CoachDiaryDb extends Dexie {
@@ -22,6 +22,7 @@ class CoachDiaryDb extends Dexie {
   opponentPlayers!: Table<OpponentPlayer, number>;
   playCategories!: Table<PlayCategory, number>;
   drillCategories!: Table<DrillCategory, number>;
+  games!: Table<Game, number>;
 
   constructor() {
     super('CoachDiaryDB');
@@ -60,6 +61,9 @@ class CoachDiaryDb extends Dexie {
     }));
     this.version(7).stores({
       seasonPlans: '++id, team_id, start_date',
+    });
+    this.version(8).stores({
+      games: '++id, teamId, date',
     });
   }
 }
@@ -375,6 +379,27 @@ export class DbService {
   async deletePlayCategory(id: number): Promise<void> {
     await this.db.plays.where('category_id').equals(id).modify({ category_id: undefined });
     await this.db.playCategories.delete(id);
+  }
+
+  // ── Games ─────────────────────────────────────────────────────
+  listGames(teamId: number): Promise<Game[]> {
+    return this.db.games.where('teamId').equals(teamId).reverse().sortBy('date');
+  }
+
+  getGame(id: number): Promise<Game | undefined> {
+    return this.db.games.get(id);
+  }
+
+  addGame(game: Omit<Game, 'id'>): Promise<number> {
+    return this.db.games.add(game as Game);
+  }
+
+  async updateGame(id: number, changes: Partial<Omit<Game, 'id'>>): Promise<void> {
+    await this.db.games.update(id, changes);
+  }
+
+  deleteGame(id: number): Promise<void> {
+    return this.db.games.delete(id);
   }
 
   // ── Drill categories ──────────────────────────────────────────

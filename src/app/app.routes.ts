@@ -76,6 +76,18 @@ export const routes: Routes = [
       import('./features/season/season.component').then(m => m.SeasonComponent),
   },
 
+  // Team — games
+  {
+    path: 'teams/:teamId/games',
+    loadComponent: () =>
+      import('./features/games/games-list/games-list.component').then(m => m.GamesListComponent),
+  },
+  {
+    path: 'teams/:teamId/games/:gameId',
+    loadComponent: () =>
+      import('./features/games/game-detail/game-detail.component').then(m => m.GameDetailComponent),
+  },
+
   // Catch-all fallback
   { path: '**', redirectTo: 'teams' },
 ];

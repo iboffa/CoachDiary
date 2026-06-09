@@ -160,3 +160,14 @@ export interface GameNote {
   content: string;
   created_at?: string;
 }
+
+export interface Game {
+  id?: number;
+  teamId: number;
+  date: string;
+  opponent: string;
+  homeAway: 'home' | 'away';
+  scoreUs: number | null;
+  scoreThem: number | null;
+  notes: string;
+}
