@@ -1,0 +1,209 @@
+$bg: #1e2536;
+$border: #2a2f3e;
+$accent: #2563eb;
+$accent-hover: #1d4ed8;
+$text: #e8eaf0;
+$text-muted: #8892a4;
+$surface: #161b27;
+$face: #1a1f30;
+
+.tp-wrapper {
+  position: relative;
+  display: inline-block;
+  width: 100%;
+}
+
+// ── Trigger input ─────────────────────────────────────────────
+
+.tp-input {
+  width: 100%;
+  background: $bg;
+  border: 1px solid $border;
+  border-radius: 7px;
+  color: $text;
+  font-size: 13px;
+  padding: 8px 12px;
+  outline: none;
+  cursor: pointer;
+  transition: border-color 0.15s;
+
+  &:focus,
+  &:hover {
+    border-color: $accent;
+  }
+
+  &::placeholder {
+    color: #4a5568;
+  }
+}
+
+// ── Panel anchor ──────────────────────────────────────────────
+// Zero-size element flush with the bottom of the input that lets
+// the fixed panel appear exactly below the trigger.
+
+.tp-panel-anchor {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  height: 0;
+  width: 0;
+  overflow: visible;
+  z-index: 9999;
+}
+
+// ── Floating panel ─────────────────────────────────────────────
+
+.tp-panel {
+  position: fixed;
+  background: $surface;
+  border: 1px solid $border;
+  border-radius: 12px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.55);
+  width: 300px;
+  padding: 0 0 16px;
+  user-select: none;
+}
+
+// ── Header ────────────────────────────────────────────────────
+
+.tp-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 20px 20px 14px;
+  border-bottom: 1px solid $border;
+
+  &__part {
+    font-size: 36px;
+    font-weight: 700;
+    color: $text-muted;
+    cursor: pointer;
+    border-radius: 8px;
+    padding: 4px 10px;
+    transition: color 0.12s, background 0.12s;
+    line-height: 1;
+
+    &:hover {
+      background: $bg;
+      color: $text;
+    }
+
+    &--active {
+      color: $accent;
+    }
+  }
+
+  &__sep {
+    font-size: 36px;
+    font-weight: 700;
+    color: $text-muted;
+    line-height: 1;
+  }
+}
+
+// ── Clock face ─────────────────────────────────────────────────
+
+.tp-clock {
+  padding: 12px 12px 8px;
+
+  svg {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+}
+
+// SVG elements
+
+.clock-face {
+  fill: $face;
+}
+
+.clock-hand {
+  stroke: $accent;
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+.clock-center {
+  fill: $accent;
+}
+
+.clock-selected-bg {
+  fill: $accent;
+}
+
+.clock-number-group {
+  cursor: pointer;
+
+  .clock-number-hit {
+    fill: transparent;
+    transition: fill 0.1s;
+  }
+
+  .clock-number-text {
+    fill: $text;
+    font-size: 12px;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    font-weight: 500;
+    text-anchor: middle;
+    dominant-baseline: central;
+    pointer-events: none;
+    transition: fill 0.1s;
+  }
+
+  &:hover .clock-number-hit {
+    fill: rgba(37, 99, 235, 0.25);
+  }
+
+  &--selected {
+    .clock-number-hit {
+      fill: $accent;
+    }
+
+    .clock-number-text {
+      fill: #fff;
+      font-weight: 600;
+    }
+  }
+}
+
+// ── Actions ────────────────────────────────────────────────────
+
+.tp-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 0 16px;
+}
+
+.tp-btn {
+  border: none;
+  border-radius: 7px;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 7px 16px;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+
+  &--cancel {
+    background: transparent;
+    color: $text-muted;
+    border: 1px solid $border;
+
+    &:hover {
+      background: $bg;
+      color: $text;
+    }
+  }
+
+  &--ok {
+    background: $accent;
+    color: #fff;
+
+    &:hover {
+      background: $accent-hover;
+    }
+  }
+}

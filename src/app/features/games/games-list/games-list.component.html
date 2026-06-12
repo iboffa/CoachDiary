@@ -28,7 +28,12 @@
   <div class="games-grid">
     @for (game of games(); track game.id) {
       <div class="game-card" (click)="openGame(game.id!)" data-testid="game-card">
-        <div class="game-card__date">{{ game.date | date:'MMM d, y' }}</div>
+        <div class="game-card__date">
+          {{ game.date | date:'MMM d, y' }}
+          @if (game.startTime) {
+            <span class="game-card__time">· {{ game.startTime }}</span>
+          }
+        </div>
         <div class="game-card__body">
           <div class="game-card__opponent">{{ game.opponent }}</div>
           <div class="game-card__meta">

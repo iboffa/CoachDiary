@@ -88,6 +88,13 @@ export const routes: Routes = [
       import('./features/games/game-detail/game-detail.component').then(m => m.GameDetailComponent),
   },
 
+  // Team — calendar
+  {
+    path: 'teams/:teamId/calendar',
+    loadComponent: () =>
+      import('./features/calendar/calendar.component').then(m => m.CalendarComponent),
+  },
+
   // Catch-all fallback
   { path: '**', redirectTo: 'teams' },
 ];

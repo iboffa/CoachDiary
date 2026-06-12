@@ -1,0 +1,247 @@
+<div class="calendar-page">
+  <div class="page-header">
+    <h1>Calendar</h1>
+    <div class="header-controls">
+      <div class="view-toggle">
+        <button
+          class="view-toggle__btn"
+          [class.view-toggle__btn--active]="viewMode() === 'month'"
+          (click)="setViewMode('month')"
+        >Month</button>
+        <button
+          class="view-toggle__btn"
+          [class.view-toggle__btn--active]="viewMode() === 'week'"
+          (click)="setViewMode('week')"
+        >Week</button>
+      </div>
+
+      <div class="month-nav">
+        <button class="btn btn--ghost" (click)="prev()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M15.75 19.5L8.25 12l7.5-7.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+        <span class="month-label">{{ headerLabel() }}</span>
+        <button class="btn btn--ghost" (click)="next()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M8.25 4.5l7.5 7.5-7.5 7.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="calendar-body">
+    <div class="calendar-main">
+      <div class="calendar-grid" [class.calendar-grid--week]="viewMode() === 'week'">
+        @for (day of weekDays; track day) {
+          <div class="calendar-grid__header">{{ day }}</div>
+        }
+
+        @for (day of days(); track day.date.getTime()) {
+          <div
+            class="calendar-grid__cell"
+            [class.calendar-grid__cell--other-month]="!day.isCurrentMonth"
+            [class.calendar-grid__cell--today]="day.isToday"
+            [class.calendar-grid__cell--selected]="selectedDay()?.getTime() === day.date.getTime()"
+            [class.calendar-grid__cell--week-view]="viewMode() === 'week'"
+            (click)="selectDay(day)"
+          >
+            <div class="cell-top-row">
+              <span class="cell-day-number">{{ dayLabel(day.date) }}</span>
+              <div class="cell-add-wrapper">
+                <button
+                  class="cell-add-btn"
+                  (click)="openPopover(day, $event)"
+                  title="Add event"
+                >+</button>
+              </div>
+            </div>
+
+            @for (event of visibleChips(day.events); track event.id) {
+              <span
+                class="event-chip"
+                [class]="'event-chip--' + event.type"
+                [class.event-chip--recurring]="event.isRecurring"
+              >
+                {{ chipLabel(event) }}
+              </span>
+            }
+
+            @if (overflowCount(day.events) > 0) {
+              <span class="event-overflow">+{{ overflowCount(day.events) }} more</span>
+            }
+          </div>
+        }
+      </div>
+
+      @if (selectedDay() !== null && selectedDayEvents().length > 0) {
+        <div class="day-detail">
+          <div class="day-detail__header">
+            Events on {{ selectedDay()! | date:'MMMM d, y' }}
+          </div>
+          <div class="day-detail__list">
+            @for (event of selectedDayEvents(); track event.id) {
+              @if (event.isRecurring) {
+                <div class="day-detail__item day-detail__item--recurring">
+                  <span class="day-detail__dot day-detail__dot--training"></span>
+                  <div class="day-detail__info">
+                    <span class="day-detail__recurring-label">
+                      <svg class="day-detail__repeat-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M19.5 12c0-1.232-.046-2.453-.138-3.662a4.006 4.006 0 00-3.7-3.7 48.678 48.678 0 00-7.324 0 4.006 4.006 0 00-3.7 3.7c-.017.22-.032.441-.046.662M19.5 12l3-3m-3 3l-3-3m-12 3c0 1.232.046 2.453.138 3.662a4.006 4.006 0 003.7 3.7 48.656 48.656 0 007.324 0 4.006 4.006 0 003.7-3.7c.017-.22.032-.441.046-.662M4.5 12l3 3m-3-3l-3 3" stroke-linecap="round" stroke-linejoin="round"/>
+                      </svg>
+                      Recurring &middot; from weekly schedule
+                    </span>
+                    <span class="day-detail__title">{{ event.title }}</span>
+                    @if (timeDurationLabel(event)) {
+                      <span class="day-detail__time">{{ timeDurationLabel(event) }}</span>
+                    }
+                  </div>
+                  <button
+                    class="day-detail__promote"
+                    title="Plan this session"
+                    (click)="promoteToSession(event, $event)"
+                  >
+                    Plan this session
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                      <path d="M8.25 4.5l7.5 7.5-7.5 7.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                  </button>
+                </div>
+              } @else if (event.routerLink) {
+                <a class="day-detail__item" [routerLink]="event.routerLink">
+                  <span class="day-detail__dot" [class]="'day-detail__dot--' + event.type"></span>
+                  <div class="day-detail__info">
+                    <span class="day-detail__type-label">{{ typeLabel(event.type) }}</span>
+                    <span class="day-detail__title">{{ event.title }}</span>
+                    @if (timeDurationLabel(event)) {
+                      <span class="day-detail__time">{{ timeDurationLabel(event) }}</span>
+                    }
+                  </div>
+                  <svg class="day-detail__arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <path d="M8.25 4.5l7.5 7.5-7.5 7.5" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </a>
+              } @else {
+                <div class="day-detail__item day-detail__item--custom">
+                  <span class="day-detail__dot" [class]="'day-detail__dot--' + event.type"></span>
+                  <div class="day-detail__info">
+                    <span class="day-detail__type-label">{{ typeLabel(event.type) }}</span>
+                    <span class="day-detail__title">{{ event.title }}</span>
+                    @if (timeDurationLabel(event)) {
+                      <span class="day-detail__time">{{ timeDurationLabel(event) }}</span>
+                    }
+                  </div>
+                  <button
+                    class="day-detail__delete"
+                    title="Delete event"
+                    (click)="deleteCustomEvent(event.customEventId!, $event)"
+                  >
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                      <path d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                  </button>
+                </div>
+              }
+            }
+          </div>
+        </div>
+      }
+
+      @if (selectedDay() !== null && selectedDayEvents().length === 0) {
+        <div class="day-detail day-detail--empty">
+          No events on {{ selectedDay()! | date:'MMMM d, y' }}
+        </div>
+      }
+    </div>
+  </div>
+</div>
+
+@if (popoverDay() !== null && inlineForm() === null && popoverPosition() !== null) {
+  <div
+    class="add-popover"
+    [style.top.px]="popoverPosition()!.top"
+    [style.left.px]="popoverPosition()!.left"
+    (click)="$event.stopPropagation()"
+  >
+    <button class="add-popover__item" (click)="navigateToCreate('game', popoverDay()!)">
+      <span class="add-popover__dot add-popover__dot--game"></span>
+      Game
+    </button>
+    <button class="add-popover__item" (click)="navigateToCreate('training', popoverDay()!)">
+      <span class="add-popover__dot add-popover__dot--training"></span>
+      Training Session
+    </button>
+    <button class="add-popover__item" (click)="openInlineForm('meeting', popoverDay()!, $event)">
+      <span class="add-popover__dot add-popover__dot--meeting"></span>
+      Meeting
+    </button>
+    <button class="add-popover__item" (click)="openInlineForm('video-session', popoverDay()!, $event)">
+      <span class="add-popover__dot add-popover__dot--video-session"></span>
+      Video Session
+    </button>
+    <button class="add-popover__item" (click)="openInlineForm('tournament', popoverDay()!, $event)">
+      <span class="add-popover__dot add-popover__dot--tournament"></span>
+      Tournament
+    </button>
+    <button class="add-popover__item" (click)="openInlineForm('other', popoverDay()!, $event)">
+      <span class="add-popover__dot add-popover__dot--other"></span>
+      Other
+    </button>
+  </div>
+}
+
+@if (inlineForm() !== null && popoverPosition() !== null) {
+  <div
+    class="inline-form"
+    [style.top.px]="popoverPosition()!.top"
+    [style.left.px]="popoverPosition()!.left"
+    (click)="$event.stopPropagation()"
+  >
+    <div class="inline-form__type-label">
+      <span class="inline-form__dot" [class]="'inline-form__dot--' + inlineForm()!.type"></span>
+      {{ customEventTypeLabels[inlineForm()!.type] }}
+    </div>
+    <input
+      class="inline-form__input"
+      type="text"
+      placeholder="Title *"
+      [(ngModel)]="inlineForm()!.title"
+      (click)="$event.stopPropagation()"
+    />
+    <div class="inline-form__row">
+      <app-time-picker
+        class="inline-form__input inline-form__input--half"
+        [value]="inlineForm()!.startTime"
+        (confirmed)="setInlineStartTime($event)"
+        (click)="$event.stopPropagation()"
+      />
+      <input
+        class="inline-form__input inline-form__input--half"
+        type="number"
+        placeholder="Duration (min)"
+        min="1"
+        [(ngModel)]="inlineForm()!.durationMinutes"
+        (click)="$event.stopPropagation()"
+      />
+    </div>
+    <textarea
+      class="inline-form__textarea"
+      placeholder="Notes (optional)"
+      [(ngModel)]="inlineForm()!.notes"
+      rows="2"
+      (click)="$event.stopPropagation()"
+    ></textarea>
+    <div class="inline-form__actions">
+      <button
+        class="inline-form__btn inline-form__btn--cancel"
+        (click)="cancelInlineForm($event)"
+      >Cancel</button>
+      <button
+        class="inline-form__btn inline-form__btn--save"
+        [disabled]="!inlineForm()!.title.trim() || inlineForm()!.saving"
+        (click)="saveInlineForm($event)"
+      >{{ inlineForm()!.saving ? 'Saving…' : 'Save' }}</button>
+    </div>
+  </div>
+}

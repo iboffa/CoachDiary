@@ -3,10 +3,11 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { GameService } from '../../../core/services/game.service';
 import { Game } from '../../../shared/models/models';
+import { TimePickerComponent } from '../../../shared/components/time-picker/time-picker.component';
 
 @Component({
   selector: 'app-game-detail',
-  imports: [FormsModule],
+  imports: [FormsModule, TimePickerComponent],
   templateUrl: './game-detail.component.html',
   styleUrl: './game-detail.component.scss',
 })
@@ -33,6 +34,11 @@ export class GameDetailComponent {
   constructor() {
     if (!this.isNew && this.gameId !== null) {
       this.load(this.gameId);
+      return;
+    }
+    const dateParam = this.route.snapshot.queryParamMap.get('date');
+    if (dateParam) {
+      this.game.date = dateParam;
     }
   }
 
@@ -50,6 +56,7 @@ export class GameDetailComponent {
       const payload: Omit<Game, 'id'> = {
         teamId: this.teamId,
         date: this.game.date ?? new Date().toISOString().split('T')[0],
+        startTime: this.game.startTime ?? null,
         opponent: this.game.opponent.trim(),
         homeAway: this.game.homeAway ?? 'home',
         scoreUs: this.game.scoreUs ?? null,
@@ -80,6 +87,7 @@ export class GameDetailComponent {
   private defaultGame(): Partial<Game> {
     return {
       date: new Date().toISOString().split('T')[0],
+      startTime: null,
       opponent: '',
       homeAway: 'home',
       scoreUs: null,

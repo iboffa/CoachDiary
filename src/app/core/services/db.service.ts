@@ -4,7 +4,7 @@ import {
   Player, PlayerNote, Play, PlaySummary,
   TrainingSession, SeasonPlan, GameNote,
   Team, TeamNote, Opponent, OpponentPlayer, OpponentNote, SavedDrill,
-  PlayCategory, DrillCategory, Game,
+  PlayCategory, DrillCategory, Game, CalendarCustomEvent, RecurringSchedule,
 } from '../../shared/models/models';
 
 class CoachDiaryDb extends Dexie {
@@ -23,6 +23,8 @@ class CoachDiaryDb extends Dexie {
   playCategories!: Table<PlayCategory, number>;
   drillCategories!: Table<DrillCategory, number>;
   games!: Table<Game, number>;
+  calendarEvents!: Table<CalendarCustomEvent, number>;
+  recurringSchedules!: Table<RecurringSchedule, number>;
 
   constructor() {
     super('CoachDiaryDB');
@@ -64,6 +66,12 @@ class CoachDiaryDb extends Dexie {
     });
     this.version(8).stores({
       games: '++id, teamId, date',
+    });
+    this.version(9).stores({
+      calendarEvents: '++id, teamId, date',
+    });
+    this.version(10).stores({
+      recurringSchedules: '++id, teamId',
     });
   }
 }
@@ -400,6 +408,40 @@ export class DbService {
 
   deleteGame(id: number): Promise<void> {
     return this.db.games.delete(id);
+  }
+
+  // ── Calendar custom events ────────────────────────────────────
+  listCalendarEvents(teamId: number): Promise<CalendarCustomEvent[]> {
+    return this.db.calendarEvents.where('teamId').equals(teamId).sortBy('date');
+  }
+
+  addCalendarEvent(event: Omit<CalendarCustomEvent, 'id'>): Promise<number> {
+    return this.db.calendarEvents.add(event as CalendarCustomEvent);
+  }
+
+  async updateCalendarEvent(id: number, changes: Partial<CalendarCustomEvent>): Promise<void> {
+    await this.db.calendarEvents.update(id, changes);
+  }
+
+  deleteCalendarEvent(id: number): Promise<void> {
+    return this.db.calendarEvents.delete(id);
+  }
+
+  // ── Recurring schedules ───────────────────────────────────────
+  listRecurringSchedules(teamId: number): Promise<RecurringSchedule[]> {
+    return this.db.recurringSchedules.where('teamId').equals(teamId).toArray();
+  }
+
+  addRecurringSchedule(s: Omit<RecurringSchedule, 'id'>): Promise<number> {
+    return this.db.recurringSchedules.add(s as RecurringSchedule);
+  }
+
+  async updateRecurringSchedule(id: number, changes: Partial<RecurringSchedule>): Promise<void> {
+    await this.db.recurringSchedules.update(id, changes);
+  }
+
+  deleteRecurringSchedule(id: number): Promise<void> {
+    return this.db.recurringSchedules.delete(id);
   }
 
   // ── Drill categories ──────────────────────────────────────────
