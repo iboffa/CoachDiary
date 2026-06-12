@@ -2,6 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter, ActivatedRoute } from '@angular/router';
 import { SeasonComponent } from './season.component';
 import { SeasonPlanService } from '../../core/services/season-plan.service';
+import { RecurringScheduleService } from '../calendar/recurring-schedule.service';
 import { SeasonGoal, SeasonPlan } from '../../shared/models/models';
 
 const GOALS: SeasonGoal[] = [
@@ -40,11 +41,19 @@ describe('SeasonComponent', () => {
       delete: vi.fn().mockResolvedValue(undefined),
     };
 
+    const scheduleService = {
+      list:   vi.fn().mockResolvedValue([]),
+      add:    vi.fn().mockResolvedValue(1),
+      update: vi.fn().mockResolvedValue(undefined),
+      delete: vi.fn().mockResolvedValue(undefined),
+    };
+
     await TestBed.configureTestingModule({
       imports: [SeasonComponent],
       providers: [
         provideRouter([]),
         { provide: SeasonPlanService, useValue: service },
+        { provide: RecurringScheduleService, useValue: scheduleService },
         {
           provide: ActivatedRoute,
           useValue: {

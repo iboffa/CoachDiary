@@ -5,10 +5,11 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { TrainingSessionService } from '../../core/services/training-session.service';
 import { Drill, DrillCategory, SavedDrill, TrainingSession } from '../../shared/models/models';
 import { DrillPreviewComponent } from './drill-preview.component';
+import { TimePickerComponent } from '../../shared/components/time-picker/time-picker.component';
 
 @Component({
   selector: 'app-training',
-  imports: [FormsModule, DatePipe, DrillPreviewComponent],
+  imports: [FormsModule, DatePipe, DrillPreviewComponent, TimePickerComponent],
   templateUrl: './training.component.html',
   styleUrl: './training.component.scss',
 })
@@ -102,6 +103,13 @@ export class TrainingComponent {
       const id = parseInt(returnSessionId, 10);
       const session = sessions.find(s => s.id === id) ?? templates.find(s => s.id === id);
       if (session) this.selectSession(session);
+      return;
+    }
+
+    const dateParam = this.route.snapshot.queryParamMap.get('date');
+    if (dateParam) {
+      this.newSession();
+      this.editingSession.date = dateParam;
     }
   }
 

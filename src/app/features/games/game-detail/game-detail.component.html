@@ -27,6 +27,14 @@
         <label>Date</label>
         <input type="date" [(ngModel)]="game.date" data-testid="game-date-input"/>
       </div>
+      <div class="form-group">
+        <label>Start Time</label>
+        <app-time-picker
+          [value]="game.startTime ?? ''"
+          (confirmed)="game.startTime = $event"
+          data-testid="game-start-time-input"
+        />
+      </div>
       <div class="form-group" style="flex:2">
         <label>Opponent</label>
         <input type="text" [(ngModel)]="game.opponent" placeholder="Opponent name" data-testid="game-opponent-input"/>

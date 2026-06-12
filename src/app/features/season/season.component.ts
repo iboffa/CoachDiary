@@ -3,16 +3,21 @@ import { FormsModule } from '@angular/forms';
 import { DatePipe } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { SeasonPlanService } from '../../core/services/season-plan.service';
-import { SeasonGoal, SeasonPlan } from '../../shared/models/models';
+import { RecurringScheduleService } from '../calendar/recurring-schedule.service';
+import { SeasonGoal, SeasonPlan, RecurringSchedule } from '../../shared/models/models';
+import { TimePickerComponent } from '../../shared/components/time-picker/time-picker.component';
+
+const DAY_ABBRS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
 @Component({
   selector: 'app-season',
-  imports: [FormsModule, DatePipe],
+  imports: [FormsModule, DatePipe, TimePickerComponent],
   templateUrl: './season.component.html',
   styleUrl: './season.component.scss',
 })
 export class SeasonComponent {
   private readonly service = inject(SeasonPlanService);
+  private readonly scheduleService = inject(RecurringScheduleService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
 
@@ -34,6 +39,16 @@ export class SeasonComponent {
 
   editingPlan: Partial<SeasonPlan> = {};
 
+  // ── Weekly schedule state ─────────────────────────────────────
+  readonly dayAbbrs = DAY_ABBRS;
+  readonly scheduleSelectedDays = signal<number[]>([]);
+  readonly scheduleStartTime = signal<string>('');
+  readonly scheduleDuration = signal<number | null>(null);
+  readonly scheduleSaving = signal(false);
+  readonly scheduleTitle = signal<string>('Team Training');
+
+  private existingScheduleId = signal<number | null>(null);
+
   constructor() {
     this.load();
   }
@@ -47,6 +62,7 @@ export class SeasonComponent {
     this.editingGoals.set(this.parseGoals(plan.goals));
     this.isNew.set(false);
     this.showForm.set(true);
+    this.loadScheduleForPlan(plan);
   }
 
   newPlan(): void {
@@ -60,12 +76,14 @@ export class SeasonComponent {
     this.editingGoals.set([]);
     this.isNew.set(true);
     this.showForm.set(true);
+    this.resetScheduleState();
   }
 
   cancelEdit(): void {
     this.showForm.set(false);
     this.editingPlan = {};
     this.editingGoals.set([]);
+    this.resetScheduleState();
   }
 
   async save(): Promise<void> {
@@ -129,6 +147,54 @@ export class SeasonComponent {
     );
   }
 
+  // ── Weekly schedule ───────────────────────────────────────────
+
+  toggleScheduleDay(dayIndex: number): void {
+    this.scheduleSelectedDays.update(days =>
+      days.includes(dayIndex)
+        ? days.filter(d => d !== dayIndex)
+        : [...days, dayIndex].sort((a, b) => a - b),
+    );
+  }
+
+  isScheduleDaySelected(dayIndex: number): boolean {
+    return this.scheduleSelectedDays().includes(dayIndex);
+  }
+
+  setScheduleStartTime(time: string): void {
+    this.scheduleStartTime.set(time);
+  }
+
+  async saveSchedule(): Promise<void> {
+    if (!this.editingPlan.start_date || !this.editingPlan.end_date) return;
+    if (this.teamId === null) return;
+
+    this.scheduleSaving.set(true);
+    try {
+      const existingId = this.existingScheduleId();
+      if (existingId !== null) {
+        await this.scheduleService.delete(existingId);
+        this.existingScheduleId.set(null);
+      }
+
+      if (this.scheduleSelectedDays().length > 0) {
+        const newId = await this.scheduleService.add({
+          teamId: this.teamId,
+          title: this.scheduleTitle().trim() || 'Team Training',
+          daysOfWeek: this.scheduleSelectedDays(),
+          startTime: this.scheduleStartTime().trim() || null,
+          durationMinutes: this.scheduleDuration(),
+          startDate: this.editingPlan.start_date!,
+          endDate: this.editingPlan.end_date!,
+          active: true,
+        });
+        this.existingScheduleId.set(newId);
+      }
+    } finally {
+      this.scheduleSaving.set(false);
+    }
+  }
+
   // ── Sidebar helpers ───────────────────────────────────────────
 
   goalCount(plan: SeasonPlan): number {
@@ -152,5 +218,32 @@ export class SeasonComponent {
       const parsed = JSON.parse(json ?? '[]');
       return Array.isArray(parsed) ? parsed : [];
     } catch { return []; }
+  }
+
+  private resetScheduleState(): void {
+    this.scheduleSelectedDays.set([]);
+    this.scheduleStartTime.set('');
+    this.scheduleDuration.set(null);
+    this.scheduleSaving.set(false);
+    this.scheduleTitle.set('Team Training');
+    this.existingScheduleId.set(null);
+  }
+
+  private async loadScheduleForPlan(plan: SeasonPlan): Promise<void> {
+    this.resetScheduleState();
+    if (this.teamId === null || !plan.start_date || !plan.end_date) return;
+
+    const allSchedules = await this.scheduleService.list(this.teamId);
+    const match = allSchedules.find(
+      s => s.startDate === plan.start_date && s.endDate === plan.end_date,
+    );
+
+    if (match) {
+      this.existingScheduleId.set(match.id ?? null);
+      this.scheduleSelectedDays.set([...match.daysOfWeek]);
+      this.scheduleStartTime.set(match.startTime ?? '');
+      this.scheduleDuration.set(match.durationMinutes);
+      if (match.title) this.scheduleTitle.set(match.title);
+    }
   }
 }

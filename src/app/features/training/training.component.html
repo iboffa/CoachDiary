@@ -122,6 +122,13 @@
             <label>Date</label>
             <input type="date" [(ngModel)]="editingSession.date"/>
           </div>
+          <div class="form-group">
+            <label>Start time</label>
+            <app-time-picker
+              [value]="editingSession.start_time ?? ''"
+              (valueChange)="editingSession.start_time = $event"
+            />
+          </div>
           <div class="form-group dur-group">
             <label>Duration (min)</label>
             <input type="number"

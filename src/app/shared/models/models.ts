@@ -111,6 +111,7 @@ export interface TrainingSession {
   team_id?: number;
   name: string;
   date?: string;
+  start_time?: string;
   duration_minutes?: number;
   focus?: string;
   notes?: string;
@@ -165,9 +166,35 @@ export interface Game {
   id?: number;
   teamId: number;
   date: string;
+  startTime?: string | null;
   opponent: string;
   homeAway: 'home' | 'away';
   scoreUs: number | null;
   scoreThem: number | null;
   notes: string;
+}
+
+export type CalendarCustomEventType = 'meeting' | 'video-session' | 'tournament' | 'other';
+
+export interface CalendarCustomEvent {
+  id?: number;
+  teamId: number;
+  title: string;
+  date: string;           // "YYYY-MM-DD"
+  startTime: string | null;  // "HH:MM"
+  durationMinutes: number | null;
+  type: CalendarCustomEventType;
+  notes?: string;
+}
+
+export interface RecurringSchedule {
+  id?: number;
+  teamId: number;
+  title: string;
+  daysOfWeek: number[];   // 0=Mon … 6=Sun (ISO weekday - 1)
+  startTime: string | null;  // "HH:MM"
+  durationMinutes: number | null;
+  startDate: string;   // "YYYY-MM-DD"
+  endDate: string;     // "YYYY-MM-DD"
+  active: boolean;
 }

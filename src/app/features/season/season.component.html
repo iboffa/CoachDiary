@@ -127,6 +127,69 @@
           }
         </div>
 
+        <div class="schedule-section">
+          <div class="schedule-section__header">
+            <h3>Weekly Training Schedule</h3>
+            <span class="schedule-section__hint">Applies to the calendar for this season's date range</span>
+          </div>
+
+          <div class="form-group">
+            <label>Schedule Title</label>
+            <input
+              type="text"
+              [ngModel]="scheduleTitle()"
+              (ngModelChange)="scheduleTitle.set($event)"
+              placeholder="e.g. Team Training"
+              class="schedule-title-input"
+            />
+          </div>
+
+          <div class="schedule-days">
+            @for (abbr of dayAbbrs; track $index) {
+              <button
+                type="button"
+                class="schedule-day-btn"
+                [class.schedule-day-btn--active]="isScheduleDaySelected($index)"
+                (click)="toggleScheduleDay($index)"
+              >{{ abbr }}</button>
+            }
+          </div>
+
+          <div class="schedule-time-row">
+            <div class="form-group schedule-time-group">
+              <label>Start Time</label>
+              <app-time-picker
+                [value]="scheduleStartTime()"
+                (confirmed)="setScheduleStartTime($event)"
+              />
+            </div>
+            <div class="form-group schedule-duration-group">
+              <label>Duration (min)</label>
+              <input
+                type="number"
+                min="1"
+                placeholder="e.g. 90"
+                [ngModel]="scheduleDuration()"
+                (ngModelChange)="scheduleDuration.set($event ? +$event : null)"
+              />
+            </div>
+          </div>
+
+          <div class="schedule-section__actions">
+            <button
+              class="btn btn--primary btn--sm schedule-save-btn"
+              [disabled]="scheduleSaving() || !editingPlan.start_date || !editingPlan.end_date"
+              (click)="saveSchedule()"
+              data-testid="save-schedule-btn"
+            >
+              {{ scheduleSaving() ? 'Saving…' : 'Save schedule' }}
+            </button>
+            @if (scheduleSelectedDays().length === 0) {
+              <span class="schedule-section__no-days">No days selected — saving will clear the schedule for this season.</span>
+            }
+          </div>
+        </div>
+
       </section>
     } @else {
       <div class="no-selection empty-state">

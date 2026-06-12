@@ -1,0 +1,104 @@
+<div class="tp-wrapper" #wrapperRef>
+
+  <!-- Trigger input -->
+  <input
+    class="tp-input"
+    type="text"
+    [value]="value()"
+    placeholder="HH:MM"
+    readonly
+    (click)="onInputClick($event)"
+  />
+
+  <!-- Floating panel — rendered outside wrapper via fixed positioning -->
+  @if (isOpen()) {
+    <div
+      class="tp-panel"
+      #panelRef
+      [style.top.px]="panelTop()"
+      [style.left.px]="panelLeft()"
+      (click)="onPanelClick($event)"
+    >
+
+      <!-- Header: shows current selection -->
+      <div class="tp-header">
+        <span
+          class="tp-header__part"
+          [class.tp-header__part--active]="phase() === 'hour'"
+          (click)="phase.set('hour')"
+        >{{ headerHour() }}</span>
+        <span class="tp-header__sep">:</span>
+        <span
+          class="tp-header__part"
+          [class.tp-header__part--active]="phase() === 'minute'"
+          (click)="phase.set('minute')"
+        >{{ headerMinute() }}</span>
+      </div>
+
+      <!-- Clock SVG -->
+      <div class="tp-clock">
+        <svg viewBox="0 0 280 280" xmlns="http://www.w3.org/2000/svg">
+
+          <!-- Clock face background circle -->
+          <circle cx="140" cy="140" r="116" class="clock-face"/>
+
+          <!-- Clock hand -->
+          <line
+            x1="140" y1="140"
+            [attr.x2]="selectedPosition().x"
+            [attr.y2]="selectedPosition().y"
+            class="clock-hand"
+          />
+
+          <!-- Center dot -->
+          <circle cx="140" cy="140" r="4" class="clock-center"/>
+
+          <!-- Hand tip circle (selected number background) -->
+          <circle
+            [attr.cx]="selectedPosition().x"
+            [attr.cy]="selectedPosition().y"
+            r="18"
+            class="clock-selected-bg"
+          />
+
+          <!-- Hour numbers -->
+          @if (phase() === 'hour') {
+            @for (pos of hourPositions(); track pos.value) {
+              <g
+                class="clock-number-group"
+                [class.clock-number-group--selected]="isSelectedHour(pos.value)"
+                (click)="selectHour(pos.value)"
+              >
+                <circle [attr.cx]="pos.x" [attr.cy]="pos.y" r="16" class="clock-number-hit"/>
+                <text [attr.x]="pos.x" [attr.y]="pos.y" class="clock-number-text">{{ pos.label }}</text>
+              </g>
+            }
+          }
+
+          <!-- Minute numbers -->
+          @if (phase() === 'minute') {
+            @for (pos of minutePositions(); track pos.value) {
+              <g
+                class="clock-number-group"
+                [class.clock-number-group--selected]="isSelectedMinute(pos.value)"
+                (click)="selectMinute(pos.value)"
+              >
+                <circle [attr.cx]="pos.x" [attr.cy]="pos.y" r="16" class="clock-number-hit"/>
+                <text [attr.x]="pos.x" [attr.y]="pos.y" class="clock-number-text">{{ pos.label }}</text>
+              </g>
+            }
+          }
+
+        </svg>
+      </div>
+
+      <!-- Actions -->
+      <div class="tp-actions">
+        <button class="tp-btn tp-btn--cancel" (click)="cancel()">Cancel</button>
+        <button class="tp-btn tp-btn--ok" (click)="confirm()">OK</button>
+      </div>
+
+    </div>
+  }
+
+</div>

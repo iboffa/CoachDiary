@@ -8,6 +8,7 @@ const EXISTING_GAME: Game = {
   id: 7,
   teamId: 1,
   date: '2026-05-10',
+  startTime: '18:00',
   opponent: 'Bulls U18',
   homeAway: 'home',
   scoreUs: 78,
@@ -15,11 +16,17 @@ const EXISTING_GAME: Game = {
   notes: 'Great game',
 };
 
-function makeActivatedRoute(params: Record<string, string | null>) {
+function makeActivatedRoute(
+  params: Record<string, string | null>,
+  queryParams: Record<string, string | null> = {},
+) {
   return {
     snapshot: {
       paramMap: {
         get: (k: string) => params[k] ?? null,
+      },
+      queryParamMap: {
+        get: (k: string) => queryParams[k] ?? null,
       },
     },
   };
@@ -28,6 +35,7 @@ function makeActivatedRoute(params: Record<string, string | null>) {
 async function createComponent(
   routeParams: Record<string, string | null>,
   serviceOverrides: Partial<typeof defaultService> = {},
+  queryParams: Record<string, string | null> = {},
 ) {
   const service = { ...defaultService, ...serviceOverrides };
 
@@ -36,7 +44,7 @@ async function createComponent(
     providers: [
       provideRouter([]),
       { provide: GameService, useValue: service },
-      { provide: ActivatedRoute, useValue: makeActivatedRoute(routeParams) },
+      { provide: ActivatedRoute, useValue: makeActivatedRoute(routeParams, queryParams) },
     ],
   }).compileComponents();
 
@@ -98,6 +106,20 @@ describe('GameDetailComponent', () => {
       const { component } = await createComponent({ teamId: '1', gameId: 'new' });
       expect(component.game.date).toBe(today);
     });
+
+    it('pre-fills date from the ?date query param when present', async () => {
+      const { component } = await createComponent(
+        { teamId: '1', gameId: 'new' },
+        {},
+        { date: '2026-09-14' },
+      );
+      expect(component.game.date).toBe('2026-09-14');
+    });
+
+    it('initialises startTime as null', async () => {
+      const { component } = await createComponent({ teamId: '1', gameId: 'new' });
+      expect(component.game.startTime).toBeNull();
+    });
   });
 
   // ── existing game mode ──────────────────────────────────────────
@@ -139,6 +161,7 @@ describe('GameDetailComponent', () => {
       const { component } = await createComponent({ teamId: '1', gameId: 'new' }, { addGame });
       component.game.opponent = 'Lakers U18';
       component.game.date = '2026-06-01';
+      component.game.startTime = '19:30';
       component.game.homeAway = 'away';
       component.game.scoreUs = 80;
       component.game.scoreThem = 70;
@@ -149,6 +172,7 @@ describe('GameDetailComponent', () => {
       expect(addGame).toHaveBeenCalledWith({
         teamId: 1,
         date: '2026-06-01',
+        startTime: '19:30',
         opponent: 'Lakers U18',
         homeAway: 'away',
         scoreUs: 80,
