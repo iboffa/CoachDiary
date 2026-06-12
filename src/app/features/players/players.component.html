@@ -41,6 +41,62 @@
           <button class="btn btn--danger" style="margin-left:auto" (click)="deletePlayer(selectedPlayer()!.id!)">Delete</button>
         </div>
 
+        <!-- Tasks accordion -->
+        <div class="tasks-section">
+          <button class="tasks-section__toggle" (click)="tasksExpanded.set(!tasksExpanded())">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <span>Tasks</span>
+            @if (playerTasks().length > 0) {
+              <span class="tasks-section__count">{{ playerTasks().length }}</span>
+            }
+            <svg class="tasks-section__chevron" [class.tasks-section__chevron--open]="tasksExpanded()" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M8.25 4.5l7.5 7.5-7.5 7.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+
+          @if (tasksExpanded()) {
+            <div class="tasks-section__body">
+              <div class="task-add-row">
+                <input
+                  type="text"
+                  [(ngModel)]="newTaskTitle"
+                  placeholder="New task title"
+                  (keydown.enter)="addPlayerTask()"
+                />
+                <input
+                  type="date"
+                  [(ngModel)]="newTaskDueDate"
+                  title="Due date (optional)"
+                />
+                <button class="btn btn--primary btn--sm" (click)="addPlayerTask()" [disabled]="!newTaskTitle.trim()">Add</button>
+              </div>
+
+              @if (playerTasks().length === 0) {
+                <p class="tasks-section__empty">No tasks for this player.</p>
+              }
+
+              <div class="player-task-list">
+                @for (task of playerTasks(); track task.id) {
+                  <div class="player-task-row" [class.player-task-row--done]="task.done">
+                    <label class="player-task-row__check">
+                      <input type="checkbox" [checked]="task.done" (change)="togglePlayerTask(task)"/>
+                    </label>
+                    <span class="player-task-row__title">{{ task.title }}</span>
+                    @if (task.dueDate) {
+                      <span class="player-task-row__due" [class.player-task-row__due--overdue]="!task.done && task.dueDate < today">
+                        {{ task.dueDate | date:'MMM d' }}
+                      </span>
+                    }
+                    <button class="btn btn--danger btn--xs" (click)="deletePlayerTask(task.id!)">✕</button>
+                  </div>
+                }
+              </div>
+            </div>
+          }
+        </div>
+
         <div class="notes-section">
           <h3>Notes</h3>
           <div class="note-form card">

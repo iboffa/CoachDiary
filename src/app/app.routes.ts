@@ -95,6 +95,13 @@ export const routes: Routes = [
       import('./features/calendar/calendar.component').then(m => m.CalendarComponent),
   },
 
+  // Team — tasks
+  {
+    path: 'teams/:teamId/tasks',
+    loadComponent: () =>
+      import('./features/tasks/tasks.component').then(m => m.TasksComponent),
+  },
+
   // Catch-all fallback
   { path: '**', redirectTo: 'teams' },
 ];

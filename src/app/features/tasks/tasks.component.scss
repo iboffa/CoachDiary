@@ -1,0 +1,174 @@
+.tasks-page {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow-y: auto;
+}
+
+// ── Add form ──────────────────────────────────────────────────
+
+.add-form {
+  margin: 0 24px 16px;
+
+  &__row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+
+  &__title-input {
+    flex: 1;
+    min-width: 0;
+  }
+
+  &__date-input {
+    width: 140px;
+    flex-shrink: 0;
+  }
+
+  &__player-select {
+    width: 160px;
+    flex-shrink: 0;
+  }
+}
+
+// ── Empty state ───────────────────────────────────────────────
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 64px 16px;
+  text-align: center;
+
+  svg {
+    width: 48px;
+    height: 48px;
+    color: #374151;
+  }
+
+  p {
+    font-size: 14px;
+    font-weight: 500;
+    color: #6b7280;
+    margin: 0;
+  }
+}
+
+// ── Task list ─────────────────────────────────────────────────
+
+.task-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 0 24px 24px;
+}
+
+.task-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: #161b27;
+  border: 1px solid #2a2f3e;
+  border-radius: 8px;
+  transition: background 0.12s, border-color 0.12s;
+
+  &:hover {
+    background: #1e2536;
+    border-color: #3a4155;
+  }
+
+  &--done {
+    opacity: 0.55;
+
+    .task-row__title {
+      text-decoration: line-through;
+      color: #6b7280;
+    }
+  }
+
+  &__check {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+    cursor: pointer;
+
+    input[type='checkbox'] {
+      width: 16px;
+      height: 16px;
+      accent-color: #2563eb;
+      cursor: pointer;
+    }
+  }
+
+  &__title {
+    flex: 1;
+    min-width: 0;
+    font-size: 14px;
+    font-weight: 500;
+    color: #e8eaf0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__badges {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+  }
+
+  &__delete {
+    background: transparent;
+    border: none;
+    padding: 4px;
+    cursor: pointer;
+    color: #4b5563;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    flex-shrink: 0;
+    transition: background 0.1s, color 0.1s;
+
+    svg {
+      width: 15px;
+      height: 15px;
+    }
+
+    &:hover {
+      background: rgba(239, 68, 68, 0.15);
+      color: #f87171;
+    }
+  }
+}
+
+// ── Badges ────────────────────────────────────────────────────
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 600;
+
+  &--due {
+    background: rgba(96, 165, 250, 0.15);
+    color: #60a5fa;
+  }
+
+  &--overdue {
+    background: rgba(239, 68, 68, 0.15);
+    color: #f87171;
+  }
+
+  &--player {
+    background: rgba(167, 139, 250, 0.15);
+    color: #a78bfa;
+  }
+}

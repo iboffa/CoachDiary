@@ -6,6 +6,7 @@ import { CalendarCustomEventService } from './calendar-custom-event.service';
 import { SeasonPlanService } from '../../core/services/season-plan.service';
 import { TeamService } from '../../core/services/team.service';
 import { RecurringScheduleService } from './recurring-schedule.service';
+import { TasksService } from '../../core/services/tasks.service';
 import { CalendarEvent } from './calendar-event.model';
 import { SeasonGoal } from '../../shared/models/models';
 
@@ -18,6 +19,7 @@ export class CalendarService {
     private seasonPlanService: SeasonPlanService,
     private teamService: TeamService,
     private recurringScheduleService: RecurringScheduleService,
+    private tasksService: TasksService,
   ) {}
 
   getEventsForTeam(teamId: number): Observable<CalendarEvent[]> {
@@ -35,8 +37,9 @@ export class CalendarService {
       seasonPlans: from(this.seasonPlanService.list(teamId)),
       notes: from(this.teamService.listNotes(teamId)),
       schedules: from(this.recurringScheduleService.list(teamId)),
+      tasks: from(this.tasksService.getTasksByTeam(teamId)),
     }).pipe(
-      map(({ games, trainings, customs, seasonPlans, notes, schedules }) => {
+      map(({ games, trainings, customs, seasonPlans, notes, schedules, tasks }) => {
         const events: CalendarEvent[] = [];
 
         for (const game of games) {
@@ -130,6 +133,19 @@ export class CalendarService {
             continue;
           }
           events.push(recurring);
+        }
+
+        for (const task of tasks) {
+          if (!task.dueDate) continue;
+          events.push({
+            id: `task-${task.id}`,
+            date: new Date(task.dueDate),
+            title: task.title,
+            type: 'task',
+            startTime: null,
+            durationMinutes: null,
+            routerLink: ['/teams', String(teamId), 'tasks'],
+          });
         }
 
         return events;

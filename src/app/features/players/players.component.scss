@@ -91,6 +91,149 @@
   flex-shrink: 0;
 }
 
+// ── Tasks accordion ───────────────────────────────────────────
+
+.tasks-section {
+  margin-bottom: 24px;
+  border: 1px solid #2a2f3e;
+  border-radius: 8px;
+  overflow: hidden;
+
+  &__toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    background: #161b27;
+    border: none;
+    padding: 12px 14px;
+    cursor: pointer;
+    color: #c8d0e0;
+    font-size: 14px;
+    font-weight: 600;
+    text-align: left;
+    transition: background 0.12s;
+
+    &:hover { background: #1e2536; }
+
+    svg:first-child {
+      width: 18px;
+      height: 18px;
+      color: #60a5fa;
+      flex-shrink: 0;
+    }
+
+    span:first-of-type { flex: 1; }
+  }
+
+  &__count {
+    background: #2563eb;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    border-radius: 10px;
+    padding: 1px 7px;
+    flex-shrink: 0;
+  }
+
+  &__chevron {
+    width: 14px;
+    height: 14px;
+    color: #6b7280;
+    flex-shrink: 0;
+    transition: transform 0.15s;
+
+    &--open { transform: rotate(90deg); }
+  }
+
+  &__body {
+    padding: 12px 14px;
+    background: #0f1117;
+    border-top: 1px solid #2a2f3e;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  &__empty {
+    font-size: 13px;
+    color: #6b7280;
+    margin: 0;
+  }
+}
+
+.task-add-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+
+  input[type='text'] { flex: 1; min-width: 0; }
+  input[type='date'] { width: 130px; flex-shrink: 0; }
+}
+
+.player-task-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.player-task-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  background: #161b27;
+  border: 1px solid #2a2f3e;
+  border-radius: 6px;
+
+  &--done {
+    opacity: 0.55;
+
+    .player-task-row__title {
+      text-decoration: line-through;
+      color: #6b7280;
+    }
+  }
+
+  &__check {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+    cursor: pointer;
+
+    input[type='checkbox'] {
+      width: 15px;
+      height: 15px;
+      accent-color: #2563eb;
+      cursor: pointer;
+    }
+  }
+
+  &__title {
+    flex: 1;
+    min-width: 0;
+    font-size: 13px;
+    font-weight: 500;
+    color: #e8eaf0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__due {
+    font-size: 11px;
+    font-weight: 600;
+    color: #60a5fa;
+    flex-shrink: 0;
+
+    &--overdue { color: #f87171; }
+  }
+
+  .btn--xs { padding: 2px 6px; font-size: 11px; flex-shrink: 0; }
+}
+
+// ── Notes section ─────────────────────────────────────────────
+
 .notes-section {
   h3 { font-size: 15px; font-weight: 600; margin-bottom: 14px; color: #c8d0e0; }
 }
