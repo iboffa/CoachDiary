@@ -7,6 +7,7 @@ import { SeasonPlanService } from '../../core/services/season-plan.service';
 import { TeamService } from '../../core/services/team.service';
 import { CalendarCustomEventService } from './calendar-custom-event.service';
 import { RecurringScheduleService } from './recurring-schedule.service';
+import { TasksService } from '../../core/services/tasks.service';
 import { Game, TrainingSession, SeasonPlan, TeamNote } from '../../shared/models/models';
 import { CalendarEvent } from './calendar-event.model';
 
@@ -65,6 +66,7 @@ describe('CalendarService', () => {
   let teamService: any;
   let customEventService: any;
   let recurringScheduleService: any;
+  let tasksService: any;
 
   beforeEach(() => {
     gameService = { getGamesByTeam: vi.fn().mockResolvedValue([]) };
@@ -76,6 +78,7 @@ describe('CalendarService', () => {
       list: vi.fn().mockResolvedValue([]),
       expandToEvents: vi.fn().mockReturnValue([]),
     };
+    tasksService = { getTasksByTeam: vi.fn().mockResolvedValue([]) };
 
     TestBed.configureTestingModule({
       providers: [
@@ -86,6 +89,7 @@ describe('CalendarService', () => {
         { provide: TeamService, useValue: teamService },
         { provide: CalendarCustomEventService, useValue: customEventService },
         { provide: RecurringScheduleService, useValue: recurringScheduleService },
+        { provide: TasksService, useValue: tasksService },
       ],
     });
 

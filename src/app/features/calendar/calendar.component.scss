@@ -268,6 +268,7 @@
     &--video-session { background: #06b6d4; }
     &--tournament    { background: #f97316; }
     &--other         { background: #6b7280; }
+    &--task          { background: #eab308; }
   }
 }
 
@@ -433,6 +434,16 @@
     background: rgba(107, 114, 128, 0.2);
     color: #9ca3af;
   }
+
+  &--task {
+    background: rgba(234, 179, 8, 0.18);
+    color: #fde68a;
+  }
+}
+
+.chip--task {
+  background: rgba(234, 179, 8, 0.18);
+  color: #fde68a;
 }
 
 .event-overflow {
@@ -498,6 +509,7 @@
     &--video-session { background: #06b6d4; }
     &--tournament    { background: #f97316; }
     &--other         { background: #6b7280; }
+    &--task          { background: #eab308; }
   }
 
   &__info {

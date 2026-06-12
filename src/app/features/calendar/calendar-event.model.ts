@@ -6,7 +6,8 @@ export type CalendarEventType =
   | 'tournament'
   | 'other'
   | 'season-goal'
-  | 'journal';
+  | 'journal'
+  | 'task';
 
 export interface CalendarEvent {
   id: string;

@@ -4,7 +4,7 @@ import {
   Player, PlayerNote, Play, PlaySummary,
   TrainingSession, SeasonPlan, GameNote,
   Team, TeamNote, Opponent, OpponentPlayer, OpponentNote, SavedDrill,
-  PlayCategory, DrillCategory, Game, CalendarCustomEvent, RecurringSchedule,
+  PlayCategory, DrillCategory, Game, CalendarCustomEvent, RecurringSchedule, Task,
 } from '../../shared/models/models';
 
 class CoachDiaryDb extends Dexie {
@@ -25,6 +25,7 @@ class CoachDiaryDb extends Dexie {
   games!: Table<Game, number>;
   calendarEvents!: Table<CalendarCustomEvent, number>;
   recurringSchedules!: Table<RecurringSchedule, number>;
+  tasks!: Table<Task, number>;
 
   constructor() {
     super('CoachDiaryDB');
@@ -72,6 +73,9 @@ class CoachDiaryDb extends Dexie {
     });
     this.version(10).stores({
       recurringSchedules: '++id, teamId',
+    });
+    this.version(11).stores({
+      tasks: '++id, teamId, playerId, dueDate',
     });
   }
 }
@@ -460,5 +464,34 @@ export class DbService {
   async deleteDrillCategory(id: number): Promise<void> {
     await this.db.savedDrills.where('category_id').equals(id).modify({ category_id: undefined });
     await this.db.drillCategories.delete(id);
+  }
+
+  // ── Tasks ─────────────────────────────────────────────────────
+  listTasksByTeam(teamId: number): Promise<Task[]> {
+    return this.db.tasks.where('teamId').equals(teamId).toArray();
+  }
+
+  async listTasksByPlayer(teamId: number, playerId: number): Promise<Task[]> {
+    const all = await this.db.tasks.where('teamId').equals(teamId).toArray();
+    return all.filter(t => t.playerId === playerId);
+  }
+
+  addTask(task: Omit<Task, 'id'>): Promise<number> {
+    return this.db.tasks.add(task as Task);
+  }
+
+  async updateTask(id: number, changes: Partial<Omit<Task, 'id'>>): Promise<void> {
+    await this.db.tasks.update(id, changes);
+  }
+
+  deleteTask(id: number): Promise<void> {
+    return this.db.tasks.delete(id);
+  }
+
+  async toggleTaskDone(id: number): Promise<void> {
+    const task = await this.db.tasks.get(id);
+    if (task) {
+      await this.db.tasks.update(id, { done: !task.done });
+    }
   }
 }

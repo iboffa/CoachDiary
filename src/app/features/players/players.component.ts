@@ -1,18 +1,20 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { TitleCasePipe } from '@angular/common';
+import { DatePipe, TitleCasePipe } from '@angular/common';
 import { ActivatedRoute } from '@angular/router';
 import { PlayerService } from '../../core/services/player.service';
-import { Player, PlayerNote } from '../../shared/models/models';
+import { TasksService } from '../../core/services/tasks.service';
+import { Player, PlayerNote, Task } from '../../shared/models/models';
 
 @Component({
   selector: 'app-players',
-  imports: [FormsModule, TitleCasePipe],
+  imports: [FormsModule, TitleCasePipe, DatePipe],
   templateUrl: './players.component.html',
   styleUrl: './players.component.scss',
 })
 export class PlayersComponent {
   private readonly playerService = inject(PlayerService);
+  private readonly tasksService = inject(TasksService);
   private readonly route = inject(ActivatedRoute);
 
   private readonly teamId: number | null = (() => {
@@ -25,7 +27,9 @@ export class PlayersComponent {
   readonly players        = signal<Player[]>([]);
   readonly selectedPlayer = signal<Player | null>(null);
   readonly notes          = signal<PlayerNote[]>([]);
+  readonly playerTasks    = signal<Task[]>([]);
   readonly showForm       = signal(false);
+  readonly tasksExpanded  = signal(false);
 
   readonly hasSelection   = computed(() => this.selectedPlayer() !== null);
   readonly isEmpty        = computed(() => this.players().length === 0);
@@ -33,8 +37,12 @@ export class PlayersComponent {
   readonly positions      = ['PG', 'SG', 'SF', 'PF', 'C'] as const;
   readonly noteCategories = ['general', 'technical', 'physical', 'mental', 'game'] as const;
 
+  readonly today = new Date().toISOString().split('T')[0];
+
   editingPlayer: Partial<Player> = {};
   newNote: Partial<PlayerNote> = this.freshNote();
+  newTaskTitle = '';
+  newTaskDueDate = '';
 
   constructor() {
     this.loadPlayers();
@@ -46,7 +54,13 @@ export class PlayersComponent {
 
   async selectPlayer(player: Player): Promise<void> {
     this.selectedPlayer.set(player);
-    this.notes.set(await this.playerService.listNotes(player.id!));
+    this.tasksExpanded.set(false);
+    const [notes, tasks] = await Promise.all([
+      this.playerService.listNotes(player.id!),
+      this.tasksService.getTasksByPlayer(this.teamId ?? 0, player.id!),
+    ]);
+    this.notes.set(notes);
+    this.playerTasks.set(tasks);
   }
 
   openNewForm(): void {
@@ -88,6 +102,42 @@ export class PlayersComponent {
     await this.playerService.deleteNote(id);
     const player = this.selectedPlayer();
     if (player) this.notes.set(await this.playerService.listNotes(player.id!));
+  }
+
+  async addPlayerTask(): Promise<void> {
+    const player = this.selectedPlayer();
+    if (!player || !this.newTaskTitle.trim()) return;
+    await this.tasksService.addTask({
+      teamId: this.teamId ?? 0,
+      title: this.newTaskTitle.trim(),
+      dueDate: this.newTaskDueDate || undefined,
+      done: false,
+      playerId: player.id!,
+      createdAt: new Date().toISOString(),
+    });
+    this.newTaskTitle = '';
+    this.newTaskDueDate = '';
+    this.playerTasks.set(
+      await this.tasksService.getTasksByPlayer(this.teamId ?? 0, player.id!),
+    );
+  }
+
+  async togglePlayerTask(task: Task): Promise<void> {
+    const player = this.selectedPlayer();
+    if (!player) return;
+    await this.tasksService.toggleDone(task.id!);
+    this.playerTasks.set(
+      await this.tasksService.getTasksByPlayer(this.teamId ?? 0, player.id!),
+    );
+  }
+
+  async deletePlayerTask(id: number): Promise<void> {
+    const player = this.selectedPlayer();
+    if (!player) return;
+    await this.tasksService.deleteTask(id);
+    this.playerTasks.set(
+      await this.tasksService.getTasksByPlayer(this.teamId ?? 0, player.id!),
+    );
   }
 
   private freshNote(): Partial<PlayerNote> {

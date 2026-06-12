@@ -361,6 +361,7 @@ export class CalendarComponent implements OnInit {
       'other': 'Other',
       'season-goal': 'Season Goal',
       'journal': 'Journal',
+      'task': 'Task',
     };
     return labels[type] ?? type;
   }

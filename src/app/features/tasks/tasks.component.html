@@ -1,0 +1,89 @@
+<div class="tasks-page">
+  <div class="page-header">
+    <h1>Tasks</h1>
+  </div>
+
+  <div class="tasks-body">
+    <!-- Add task form -->
+    <div class="add-form card" data-testid="add-task-form">
+      <div class="add-form__row">
+        <input
+          class="add-form__title-input"
+          type="text"
+          [(ngModel)]="newTitle"
+          placeholder="New task title"
+          (keydown.enter)="addTask()"
+          data-testid="task-title-input"
+        />
+        <input
+          class="add-form__date-input"
+          type="date"
+          [(ngModel)]="newDueDate"
+          title="Due date (optional)"
+        />
+        <select
+          class="add-form__player-select"
+          [(ngModel)]="newPlayerId"
+          title="Link to player (optional)"
+        >
+          <option value="">No player</option>
+          @for (player of players(); track player.id) {
+            <option [value]="player.id">{{ player.name }}</option>
+          }
+        </select>
+        <button
+          class="btn btn--primary"
+          (click)="addTask()"
+          [disabled]="!newTitle.trim()"
+          data-testid="add-task-btn"
+        >Add</button>
+      </div>
+    </div>
+
+    <!-- Empty state -->
+    @if (isEmpty()) {
+      <div class="empty-state">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2">
+          <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <p>No tasks yet. Add your first task above.</p>
+      </div>
+    }
+
+    <!-- Task list -->
+    <div class="task-list">
+      @for (task of sortedTasks(); track task.id) {
+        <div class="task-row" [class.task-row--done]="task.done">
+          <label class="task-row__check">
+            <input
+              type="checkbox"
+              [checked]="task.done"
+              (change)="toggleDone(task)"
+            />
+          </label>
+          <span class="task-row__title">{{ task.title }}</span>
+          <div class="task-row__badges">
+            @if (task.dueDate) {
+              <span class="badge badge--due" [class.badge--overdue]="!task.done && task.dueDate < today">
+                {{ task.dueDate | date:'MMM d' }}
+              </span>
+            }
+            @if (task.playerId) {
+              <span class="badge badge--player">{{ playerName(task.playerId) }}</span>
+            }
+          </div>
+          <button
+            class="task-row__delete"
+            title="Delete task"
+            (click)="deleteTask(task.id!)"
+            data-testid="delete-task-btn"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M6 18L18 6M6 6l12 12" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+        </div>
+      }
+    </div>
+  </div>
+</div>

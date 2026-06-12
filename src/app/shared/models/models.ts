@@ -198,3 +198,13 @@ export interface RecurringSchedule {
   endDate: string;     // "YYYY-MM-DD"
   active: boolean;
 }
+
+export interface Task {
+  id?: number;
+  teamId: number;
+  title: string;
+  dueDate?: string;      // "YYYY-MM-DD", optional
+  done: boolean;
+  playerId?: number;     // optional — links the task to a specific player
+  createdAt: string;     // ISO datetime
+}
