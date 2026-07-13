@@ -77,6 +77,10 @@ class CoachDiaryDb extends Dexie {
     this.version(11).stores({
       tasks: '++id, teamId, playerId, dueDate',
     });
+    this.version(12).stores({});
+    this.version(13).stores({
+      players: '++id, team_id, number, position, role',
+    });
   }
 }
 

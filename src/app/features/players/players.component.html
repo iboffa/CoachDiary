@@ -22,7 +22,12 @@
           <div class="player-card__avatar">{{ player.number }}</div>
           <div class="player-card__info">
             <span class="name">{{ player.name }}</span>
-            <span class="pos">{{ player.position }}</span>
+            <span class="pos">
+              {{ player.position }}
+              @if (player.role) {
+                <span class="role-badge role-badge--{{ player.role }}">{{ player.role === 'deep_bench' ? 'Deep' : (player.role | titlecase) }}</span>
+              }
+            </span>
           </div>
           <button class="btn btn--ghost btn--sm" (click)="$event.stopPropagation(); openEditForm(player)">Edit</button>
         </div>
@@ -35,11 +40,36 @@
         <div class="player-detail__header">
           <div class="avatar-lg">{{ selectedPlayer()!.number }}</div>
           <div>
-            <h2>{{ selectedPlayer()!.name }}</h2>
+            <div style="display:flex;align-items:center;gap:8px">
+              <h2>{{ selectedPlayer()!.name }}</h2>
+              @if (selectedPlayer()!.role) {
+                <span class="role-badge role-badge--{{ selectedPlayer()!.role }} role-badge--lg">
+                  {{ selectedPlayer()!.role === 'deep_bench' ? 'Deep Bench' : (selectedPlayer()!.role! | titlecase) }}
+                </span>
+              }
+            </div>
             <p>{{ selectedPlayer()!.position }} &bull; {{ selectedPlayer()!.height }} &bull; {{ selectedPlayer()!.dominant_hand }} handed</p>
           </div>
           <button class="btn btn--danger" style="margin-left:auto" (click)="deletePlayer(selectedPlayer()!.id!)">Delete</button>
         </div>
+
+        <!-- Coaching profile -->
+        @if (selectedPlayer()!.strengths || selectedPlayer()!.weaknesses) {
+          <div class="coaching-profile">
+            @if (selectedPlayer()!.strengths) {
+              <div class="coaching-profile__block coaching-profile__block--strengths">
+                <span class="coaching-profile__label">Strengths</span>
+                <p>{{ selectedPlayer()!.strengths }}</p>
+              </div>
+            }
+            @if (selectedPlayer()!.weaknesses) {
+              <div class="coaching-profile__block coaching-profile__block--weaknesses">
+                <span class="coaching-profile__label">Weaknesses</span>
+                <p>{{ selectedPlayer()!.weaknesses }}</p>
+              </div>
+            }
+          </div>
+        }
 
         <!-- Tasks accordion -->
         <div class="tasks-section">
@@ -175,6 +205,23 @@
               <option value="left">Left</option>
             </select>
           </div>
+        </div>
+        <div class="form-group">
+          <label>Role</label>
+          <select [(ngModel)]="editingPlayer.role">
+            <option value="">— not set —</option>
+            @for (r of roles; track r.value) {
+              <option [value]="r.value">{{ r.label }}</option>
+            }
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Strengths</label>
+          <textarea rows="2" [(ngModel)]="editingPlayer.strengths" placeholder="e.g. Elite pick-and-roll ball-handler, great court vision"></textarea>
+        </div>
+        <div class="form-group">
+          <label>Weaknesses</label>
+          <textarea rows="2" [(ngModel)]="editingPlayer.weaknesses" placeholder="e.g. Weak going left, below-average three-point shooter"></textarea>
         </div>
         <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:8px">
           <button class="btn btn--ghost" (click)="showForm.set(false)">Cancel</button>
