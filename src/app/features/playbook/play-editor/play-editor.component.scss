@@ -90,6 +90,18 @@
   gap: 8px;
 }
 
+.btn--ai-unused {
+  display: none;
+
+  svg { width: 15px; height: 15px; flex-shrink: 0; }
+
+  &:hover {
+    background: linear-gradient(135deg, #3730a3, #1e40af);
+    border-color: #6366f160;
+    color: #c7d2fe;
+  }
+}
+
 // ── Editor body ────────────────────────────────────────────────
 .editor-body {
   display: flex;
@@ -201,12 +213,24 @@
 }
 
 // ── Right panel ─────────────────────────────────────────────────
-.play-info-panel {
-  width: 220px;
+.right-panel {
+  width: 240px;
   flex-shrink: 0;
   border-left: 1px solid #2a2f3e;
   background: #161b27;
-  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.play-info-section {
+  flex-shrink: 0;
+  border-bottom: 1px solid #2a2f3e;
+}
+
+.ai-coach-section {
+  flex: 1;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
 }
@@ -251,91 +275,27 @@
   &:disabled { opacity: 0.4; cursor: default; }
 }
 
-.phases-history {
-  padding: 12px 14px 0;
+.btn--sm { padding: 5px 10px; font-size: 12px; }
 
-  &__title {
-    font-size: 10px;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    color: #4a5568;
-    margin-bottom: 6px;
-    font-weight: 600;
-  }
+.phases-history {
+  padding: 8px 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
 }
 
 .phase-chip {
-  font-size: 11px;
+  font-size: 10px;
   color: #8892a4;
   background: #1a2030;
   border: 1px solid #2a2f3e;
   border-radius: 4px;
-  padding: 4px 8px;
-  margin-bottom: 4px;
+  padding: 3px 7px;
   cursor: pointer;
   transition: border-color 0.15s, color 0.15s;
 
-  &:hover {
-    border-color: #3b82f6;
-    color: #c8d0e0;
-  }
-
-  &--active {
-    border-color: #3b82f6;
-    color: #93c5fd;
-    background: #1e2d4a;
-  }
-}
-
-.legend {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.legend-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 12px;
-  color: #8892a4;
-
-  .dot {
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    flex-shrink: 0;
-  }
-
-  &.offense .dot { background: #60a5fa; }
-  &.defense .dot { background: #c084fc; }
-}
-
-.action-legend {
-  padding: 10px 14px 14px;
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-
-  .al-line {
-    display: inline;
-    vertical-align: middle;
-    width: 28px;
-    height: 10px;
-    margin-right: 2px;
-  }
-
-  .al-item {
-    font-size: 11px;
-    color: #4a5568;
-
-    &.dribble { color: #a18910; }
-    &.pass    { color: #a18910; opacity: 0.75; }
-    &.cut     { color: #1e8c62; }
-    &.screen  { color: #9c3333; }
-    &.dho     { color: #9a4f18; }
-    &.shoot   { color: #2d5ca8; }
-  }
+  &:hover { border-color: #3b82f6; color: #c8d0e0; }
+  &--active { border-color: #3b82f6; color: #93c5fd; background: #1e2d4a; }
 }
 
 // ── Animation bar ───────────────────────────────────────────────

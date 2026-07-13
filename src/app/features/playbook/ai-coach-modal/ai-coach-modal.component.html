@@ -1,0 +1,68 @@
+<div class="ai-coach-panel">
+
+  <header class="ai-coach-panel__header">
+    <div class="ai-coach-panel__title">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <path d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456z" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      AI Coach
+    </div>
+    <button class="ai-coach-panel__reset" (click)="resetChat()" title="New conversation">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </button>
+  </header>
+
+  <div class="ai-coach-panel__messages">
+    @if (messages().length === 0) {
+      <div class="ai-coach-panel__welcome">
+        <p>Describe the play you want to create. I'll ask follow-up questions, then generate it directly on the canvas.</p>
+        @if (roster.length > 0) {
+          <p class="ai-coach-panel__welcome-sub">Roster loaded — {{ roster.length }} player{{ roster.length !== 1 ? 's' : '' }} ready.</p>
+        }
+      </div>
+    }
+
+    @for (msg of messages(); track $index) {
+      <div class="ai-coach-panel__bubble"
+           [class.ai-coach-panel__bubble--user]="msg.role === 'user'"
+           [class.ai-coach-panel__bubble--assistant]="msg.role === 'assistant'"
+           [class.ai-coach-panel__bubble--success]="msg.success">
+        {{ msg.content }}
+      </div>
+      @if (msg.options && $index === messages().length - 1 && !loading()) {
+        <div class="ai-coach-panel__options">
+          @for (opt of msg.options; track opt) {
+            <button class="ai-coach-panel__option-chip" (click)="selectOption(opt)">{{ opt }}</button>
+          }
+        </div>
+      }
+    }
+
+    @if (loading()) {
+      <div class="ai-coach-panel__bubble ai-coach-panel__bubble--assistant ai-coach-panel__bubble--loading">
+        <span class="ai-coach-panel__dot"></span>
+        <span class="ai-coach-panel__dot"></span>
+        <span class="ai-coach-panel__dot"></span>
+      </div>
+    }
+  </div>
+
+  <footer class="ai-coach-panel__input-row">
+    <textarea
+      class="ai-coach-panel__input"
+      [(ngModel)]="inputText"
+      (keydown)="onKeydown($event)"
+      placeholder="Describe your play or answer the question…"
+      rows="2"
+      [disabled]="loading()"
+    ></textarea>
+    <button class="ai-coach-panel__send" (click)="send()" [disabled]="!inputText.trim() || loading()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </button>
+  </footer>
+
+</div>

@@ -98,57 +98,40 @@
       <canvas #courtCanvas></canvas>
     </section>
 
-    <!-- Right panel -->
-    <aside class="play-info-panel">
+    <!-- Right panel: play info + AI coach -->
+    <aside class="right-panel">
 
-      <div class="phase-panel">
-        <div class="phase-label">Phase {{ currentPhaseIndex() + 1 }}</div>
-        @if (currentPathCount() === 0) {
-          <p class="phase-hint">Click a player to assign an action, then draw the movement path on the court.</p>
-        } @else {
-          <p class="phase-hint">{{ currentPathCount() }} movement{{ currentPathCount() !== 1 ? 's' : '' }} drawn.</p>
-        }
-        <button class="btn btn--accent" (click)="nextPhase()" [disabled]="currentPathCount() === 0">
-          Next Phase →
-        </button>
-      </div>
-
-      <div class="form-group" style="padding: 14px; margin-bottom: 0;">
-        <label>Description</label>
-        <textarea rows="3" [ngModel]="playDesc()" (ngModelChange)="playDesc.set($event)" placeholder="Describe the play..."></textarea>
-      </div>
-
-      @if (phases.length > 0) {
-        <div class="phases-history">
-          <div class="phases-history__title">Recorded phases</div>
-          @for (phase of phases; track $index) {
-            <div class="phase-chip" [class.phase-chip--active]="$index === currentPhaseIndex()" (click)="jumpToPhase($index)">
-              Phase {{ $index + 1 }} &mdash; {{ phase.paths.length }} move{{ phase.paths.length !== 1 ? 's' : '' }}
-            </div>
+      <div class="play-info-section">
+        <div class="phase-panel">
+          <div class="phase-label">Phase {{ currentPhaseIndex() + 1 }}</div>
+          @if (currentPathCount() === 0) {
+            <p class="phase-hint">Click a player to assign an action, then draw the path.</p>
+          } @else {
+            <p class="phase-hint">{{ currentPathCount() }} movement{{ currentPathCount() !== 1 ? 's' : '' }} drawn.</p>
           }
+          <button class="btn btn--accent btn--sm" (click)="nextPhase()" [disabled]="currentPathCount() === 0">
+            Next Phase →
+          </button>
         </div>
-      }
 
-      <div class="legend" style="padding: 14px 14px 0;">
-        <div class="legend-item offense"><span class="dot"></span> Offense</div>
-        <div class="legend-item defense"><span class="dot"></span> Defense</div>
+        @if (phases.length > 0) {
+          <div class="phases-history">
+            @for (phase of phases; track $index) {
+              <div class="phase-chip" [class.phase-chip--active]="$index === currentPhaseIndex()" (click)="jumpToPhase($index)">
+                P{{ $index + 1 }} · {{ phase.paths.length }}
+              </div>
+            }
+          </div>
+        }
       </div>
 
-      <div class="action-legend">
-        <div class="al-item dribble">
-          <svg class="al-line" viewBox="0 0 30 10">
-            <path d="M 0 5 C 1.5 1 4.5 1 6 5 C 7.5 9 10.5 9 12 5 C 13.5 1 16.5 1 18 5 L 26 5"
-                  stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M 26 5 L 23 3 M 26 5 L 23 7"
-                  stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/>
-          </svg>
-          Dribble
-        </div>
-        <div class="al-item pass">- - Pass</div>
-        <div class="al-item cut">&#8212; Cut</div>
-        <div class="al-item screen">&#8212;| Screen</div>
-        <div class="al-item dho">- - Hand-off</div>
-        <div class="al-item shoot">- - Shoot</div>
+      <div class="ai-coach-section">
+        <app-ai-coach-modal
+          [teamId]="teamId ?? 0"
+          [courtMode]="courtMode()"
+          [getPlay]="getCurrentPlay"
+          (playGenerated)="loadFromAiPlay($event)"
+        ></app-ai-coach-modal>
       </div>
 
     </aside>
@@ -254,3 +237,4 @@
 
   </div>
 }
+

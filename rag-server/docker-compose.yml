@@ -1,0 +1,12 @@
+services:
+  rag-server:
+    build: .
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    volumes:
+      # Persist the Chroma vector DB and raw data outside the container
+      - ./data/chroma:/app/data/chroma
+      - ./data/raw:/app/data/raw
+    restart: unless-stopped

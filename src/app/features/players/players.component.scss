@@ -263,6 +263,68 @@
   .btn--xs { padding: 2px 6px; font-size: 11px; }
 }
 
+// ── Role badges ───────────────────────────────────────────────
+
+.role-badge {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 1px 6px;
+  border-radius: 4px;
+  vertical-align: middle;
+
+  &--lg { font-size: 12px; padding: 2px 8px; }
+
+  &--star       { background: #78350f; color: #fde68a; }
+  &--starter    { background: #14532d; color: #86efac; }
+  &--bench      { background: #1e3a5f; color: #93c5fd; }
+  &--deep_bench { background: #1f2937; color: #9ca3af; }
+}
+
+// ── Coaching profile ──────────────────────────────────────────
+
+.coaching-profile {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 20px;
+
+  &__block {
+    flex: 1;
+    padding: 12px 14px;
+    border-radius: 8px;
+    border-left: 3px solid transparent;
+
+    &--strengths {
+      background: #0d1f12;
+      border-color: #16a34a;
+    }
+
+    &--weaknesses {
+      background: #1a0f0f;
+      border-color: #dc2626;
+    }
+  }
+
+  &__label {
+    display: block;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+    color: #6b7280;
+  }
+
+  p {
+    font-size: 13px;
+    color: #c8d0e0;
+    line-height: 1.5;
+    margin: 0;
+  }
+}
+
 .no-selection { flex: 1; }
 
 .modal-overlay {

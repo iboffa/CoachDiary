@@ -4,7 +4,7 @@ import { DatePipe, TitleCasePipe } from '@angular/common';
 import { ActivatedRoute } from '@angular/router';
 import { PlayerService } from '../../core/services/player.service';
 import { TasksService } from '../../core/services/tasks.service';
-import { Player, PlayerNote, Task } from '../../shared/models/models';
+import { Player, PlayerNote, PlayerRole, Task } from '../../shared/models/models';
 
 @Component({
   selector: 'app-players',
@@ -36,6 +36,12 @@ export class PlayersComponent {
 
   readonly positions      = ['PG', 'SG', 'SF', 'PF', 'C'] as const;
   readonly noteCategories = ['general', 'technical', 'physical', 'mental', 'game'] as const;
+  readonly roles: { value: PlayerRole; label: string }[] = [
+    { value: 'star',       label: '★ Star'       },
+    { value: 'starter',    label: 'Starter'       },
+    { value: 'bench',      label: 'Bench'         },
+    { value: 'deep_bench', label: 'Deep Bench'    },
+  ];
 
   readonly today = new Date().toISOString().split('T')[0];
 

@@ -4,6 +4,8 @@ import {
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
+import { AiCoachModalComponent } from '../ai-coach-modal/ai-coach-modal.component';
+import { PlayEditorState } from '../../../core/services/rag.service';
 import {
   Canvas, Circle, Group, FabricText, Path, FabricObject,
 } from 'fabric';
@@ -96,7 +98,7 @@ interface UndoSnapshot {
 
 @Component({
   selector: 'app-play-editor',
-  imports: [FormsModule],
+  imports: [FormsModule, AiCoachModalComponent],
   templateUrl: './play-editor.component.html',
   styleUrl: './play-editor.component.scss',
   host: {
@@ -190,7 +192,16 @@ export class PlayEditorComponent implements OnDestroy {
 
   get phases(): Phase[] { return this._phases; }
 
-  private readonly teamId: number | null = PlayEditorComponent.parseRouteId(
+  getCurrentPlay = (): PlayEditorState => buildPlayEditorStateSnapshot({
+    tokens: this.tokens,
+    phases: this._phases,
+    ballCarrierId: this.ballCarrierId(),
+    currentPhaseIndex: this.currentPhaseIndex(),
+    currentPhasePaths: this.currentPhasePaths,
+    courtMode: this.courtMode(),
+  }) as unknown as PlayEditorState;
+
+  readonly teamId: number | null = PlayEditorComponent.parseRouteId(
     this.route.snapshot.paramMap.get('teamId'));
   private readonly oppId: number | null = PlayEditorComponent.parseRouteId(
     this.route.snapshot.paramMap.get('oppId'));
@@ -1525,6 +1536,41 @@ export class PlayEditorComponent implements OnDestroy {
 
     for (const path of state.currentPhasePaths) {
       this.redrawStoredPath(path);
+    }
+
+    this.refreshShadowTokens();
+    this.updateBallIndicator();
+
+    if (this._phases.length > 0) this.jumpToPhase(0);
+  }
+
+  loadFromAiPlay(aiState: PlayEditorState): void {
+    this.stopAnimation();
+    this.clearPathEditing();
+    this.fabricCanvas.clear();
+    this.wipeState();
+    this.applyCanvasLayout(aiState.courtMode as 'half' | 'full');
+    this.courtMode.set(aiState.courtMode as 'half' | 'full');
+    drawCourt(this.fabricCanvas, aiState.courtMode as 'half' | 'full');
+    this.attachCanvasEvents();
+
+    for (const token of aiState.tokens) {
+      this.spawnToken(
+        token.id,
+        token.type as 'offense' | 'defense',
+        token.label,
+        token.position.x,
+        token.position.y,
+      );
+    }
+
+    this._phases = aiState.phases as Phase[];
+    this.phaseCount.set(this._phases.length);
+    this.ballCarrierId.set(aiState.ballCarrierId);
+    this.currentPhaseIndex.set(aiState.currentPhaseIndex);
+
+    for (const path of aiState.currentPhasePaths) {
+      this.redrawStoredPath(path as StoredPath);
     }
 
     this.refreshShadowTokens();

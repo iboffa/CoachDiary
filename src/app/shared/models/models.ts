@@ -40,6 +40,8 @@ export interface OpponentNote {
   created_at?: string;
 }
 
+export type PlayerRole = 'star' | 'starter' | 'bench' | 'deep_bench';
+
 export interface Player {
   id?: number;
   team_id?: number;
@@ -49,6 +51,10 @@ export interface Player {
   height?: string;
   weight?: string;
   dominant_hand?: 'left' | 'right';
+  role?: PlayerRole;
+  strengths?: string;
+  weaknesses?: string;
+  notes?: string;
   created_at?: string;
   updated_at?: string;
 }
