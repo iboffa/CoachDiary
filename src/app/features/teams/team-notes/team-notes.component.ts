@@ -15,7 +15,7 @@ export class TeamNotesComponent {
   private readonly route = inject(ActivatedRoute);
   private readonly teamService = inject(TeamService);
 
-  readonly teamId = parseInt(this.route.snapshot.paramMap.get('teamId')!, 10);
+  readonly teamId = this.route.snapshot.paramMap.get('teamId') ?? '';
 
   team = signal<Team | null>(null);
   entries = signal<TeamNote[]>([]);
@@ -42,7 +42,7 @@ export class TeamNotesComponent {
     this.entries.set(await this.teamService.listNotes(this.teamId));
   }
 
-  async deleteEntry(id: number): Promise<void> {
+  async deleteEntry(id: string): Promise<void> {
     await this.teamService.deleteNote(id);
     this.entries.set(await this.teamService.listNotes(this.teamId));
   }

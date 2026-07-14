@@ -17,11 +17,9 @@ export class PlayersComponent {
   private readonly tasksService = inject(TasksService);
   private readonly route = inject(ActivatedRoute);
 
-  private readonly teamId: number | null = (() => {
+  private readonly teamId: string | null = (() => {
     const raw = this.route.snapshot.paramMap.get('teamId');
-    if (!raw) return null;
-    const n = parseInt(raw, 10);
-    return isNaN(n) ? null : n;
+    return raw ?? null;
   })();
 
   readonly players        = signal<Player[]>([]);
@@ -63,7 +61,7 @@ export class PlayersComponent {
     this.tasksExpanded.set(false);
     const [notes, tasks] = await Promise.all([
       this.playerService.listNotes(player.id!),
-      this.tasksService.getTasksByPlayer(this.teamId ?? 0, player.id!),
+      this.tasksService.getTasksByPlayer(this.teamId ?? '', player.id!),
     ]);
     this.notes.set(notes);
     this.playerTasks.set(tasks);
@@ -89,7 +87,7 @@ export class PlayersComponent {
     await this.loadPlayers();
   }
 
-  async deletePlayer(id: number): Promise<void> {
+  async deletePlayer(id: string): Promise<void> {
     if (!confirm('Delete this player?')) return;
     await this.playerService.delete(id);
     if (this.selectedPlayer()?.id === id) this.selectedPlayer.set(null);
@@ -104,7 +102,7 @@ export class PlayersComponent {
     this.notes.set(await this.playerService.listNotes(player.id!));
   }
 
-  async deleteNote(id: number): Promise<void> {
+  async deleteNote(id: string): Promise<void> {
     await this.playerService.deleteNote(id);
     const player = this.selectedPlayer();
     if (player) this.notes.set(await this.playerService.listNotes(player.id!));
@@ -114,17 +112,17 @@ export class PlayersComponent {
     const player = this.selectedPlayer();
     if (!player || !this.newTaskTitle.trim()) return;
     await this.tasksService.addTask({
-      teamId: this.teamId ?? 0,
+      team_id: this.teamId ?? '',
       title: this.newTaskTitle.trim(),
-      dueDate: this.newTaskDueDate || undefined,
+      due_date: this.newTaskDueDate || undefined,
       done: false,
-      playerId: player.id!,
-      createdAt: new Date().toISOString(),
+      player_id: player.id!,
+      created_at: new Date().toISOString(),
     });
     this.newTaskTitle = '';
     this.newTaskDueDate = '';
     this.playerTasks.set(
-      await this.tasksService.getTasksByPlayer(this.teamId ?? 0, player.id!),
+      await this.tasksService.getTasksByPlayer(this.teamId ?? '', player.id!),
     );
   }
 
@@ -133,16 +131,16 @@ export class PlayersComponent {
     if (!player) return;
     await this.tasksService.toggleDone(task.id!);
     this.playerTasks.set(
-      await this.tasksService.getTasksByPlayer(this.teamId ?? 0, player.id!),
+      await this.tasksService.getTasksByPlayer(this.teamId ?? '', player.id!),
     );
   }
 
-  async deletePlayerTask(id: number): Promise<void> {
+  async deletePlayerTask(id: string): Promise<void> {
     const player = this.selectedPlayer();
     if (!player) return;
     await this.tasksService.deleteTask(id);
     this.playerTasks.set(
-      await this.tasksService.getTasksByPlayer(this.teamId ?? 0, player.id!),
+      await this.tasksService.getTasksByPlayer(this.teamId ?? '', player.id!),
     );
   }
 

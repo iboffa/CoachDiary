@@ -112,17 +112,15 @@ export class ExerciseEditorComponent implements OnDestroy {
   private fabricCanvas!: Canvas;
 
   // ── Route params ───────────────────────────────────────────────
-  private readonly teamId: number | null = ExerciseEditorComponent.parseId(
+  private readonly teamId: string | null = ExerciseEditorComponent.parseId(
     this.route.snapshot.paramMap.get('teamId'));
-  private readonly sessionId: number | null = ExerciseEditorComponent.parseId(
+  private readonly sessionId: string | null = ExerciseEditorComponent.parseId(
     this.route.snapshot.paramMap.get('sessionId'));
   private readonly drillId: string | null =
     this.route.snapshot.paramMap.get('drillId');
 
-  private static parseId(raw: string | null): number | null {
-    if (!raw) return null;
-    const n = parseInt(raw, 10);
-    return isNaN(n) ? null : n;
+  private static parseId(raw: string | null): string | null {
+    return raw ?? null;
   }
 
   // ── Reactive signals ──────────────────────────────────────────

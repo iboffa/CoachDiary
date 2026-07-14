@@ -18,11 +18,9 @@ export class TrainingComponent {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
 
-  private readonly teamId: number | null = (() => {
+  private readonly teamId: string | null = (() => {
     const raw = this.route.snapshot.paramMap.get('teamId');
-    if (!raw) return null;
-    const n = parseInt(raw, 10);
-    return isNaN(n) ? null : n;
+    return raw ?? null;
   })();
 
   readonly sessions         = signal<TrainingSession[]>([]);
@@ -37,7 +35,7 @@ export class TrainingComponent {
   readonly dragIndex        = signal<number | null>(null);
   readonly dragOverIndex    = signal<number | null>(null);
   readonly scheduledMinutes = signal<number | undefined>(undefined);
-  readonly collapsedDrillFolders = signal<Set<number | null>>(new Set());
+  readonly collapsedDrillFolders = signal<Set<string | null>>(new Set());
   newDrillCategoryName = '';
 
   readonly isEmpty = computed(() => this.sessions().length === 0);
@@ -46,7 +44,7 @@ export class TrainingComponent {
     const cats = this.drillCategories();
     const drills = this.savedDrills();
     const catMap = new Map(cats.map(c => [c.id!, c]));
-    const byCategory = new Map<number, SavedDrill[]>();
+    const byCategory = new Map<string, SavedDrill[]>();
     const uncategorized: SavedDrill[] = [];
 
     for (const drill of drills) {
@@ -100,8 +98,7 @@ export class TrainingComponent {
 
     const returnSessionId = this.route.snapshot.queryParamMap.get('session');
     if (returnSessionId) {
-      const id = parseInt(returnSessionId, 10);
-      const session = sessions.find(s => s.id === id) ?? templates.find(s => s.id === id);
+      const session = sessions.find(s => s.id === returnSessionId) ?? templates.find(s => s.id === returnSessionId);
       if (session) this.selectSession(session);
       return;
     }
@@ -174,7 +171,7 @@ export class TrainingComponent {
     }
   }
 
-  async deleteSession(id: number, event: Event): Promise<void> {
+  async deleteSession(id: string, event: Event): Promise<void> {
     event.stopPropagation();
     if (!confirm('Delete this training session?')) return;
     await this.service.delete(id);
@@ -205,7 +202,7 @@ export class TrainingComponent {
     if (created) this.selectSession(created);
   }
 
-  async deleteTemplate(id: number, event: Event): Promise<void> {
+  async deleteTemplate(id: string, event: Event): Promise<void> {
     event.stopPropagation();
     if (!confirm('Delete this template?')) return;
     await this.service.delete(id);
@@ -314,13 +311,13 @@ export class TrainingComponent {
     ]);
   }
 
-  async removeFromLibrary(id: number, event: Event): Promise<void> {
+  async removeFromLibrary(id: string, event: Event): Promise<void> {
     event.stopPropagation();
     await this.service.deleteSavedDrill(id);
     await this.loadSavedDrills();
   }
 
-  async setDrillCategory(drill: SavedDrill, categoryId: number | undefined): Promise<void> {
+  async setDrillCategory(drill: SavedDrill, categoryId: string | undefined): Promise<void> {
     await this.service.saveSavedDrill({ ...drill, category_id: categoryId });
     await this.loadSavedDrills();
   }
@@ -360,7 +357,7 @@ export class TrainingComponent {
     await this.loadDrillCategories();
   }
 
-  async deleteDrillCategory(id: number, event: Event): Promise<void> {
+  async deleteDrillCategory(id: string, event: Event): Promise<void> {
     event.stopPropagation();
     if (!confirm('Delete this category? Drills will become uncategorized.')) return;
     await this.service.deleteDrillCategory(id);
@@ -368,7 +365,7 @@ export class TrainingComponent {
     await this.loadSavedDrills();
   }
 
-  toggleDrillFolder(categoryId: number | null): void {
+  toggleDrillFolder(categoryId: string | null): void {
     this.collapsedDrillFolders.update(s => {
       const next = new Set(s);
       if (next.has(categoryId)) next.delete(categoryId);
@@ -377,7 +374,7 @@ export class TrainingComponent {
     });
   }
 
-  isDrillFolderCollapsed(categoryId: number | null): boolean {
+  isDrillFolderCollapsed(categoryId: string | null): boolean {
     return this.collapsedDrillFolders().has(categoryId);
   }
 
@@ -385,7 +382,7 @@ export class TrainingComponent {
     try { return JSON.parse(json) || []; } catch { return []; }
   }
 
-  openExercise(sessionId: number, drillId: string): void {
+  openExercise(sessionId: string, drillId: string): void {
     this.router.navigate(['/teams', this.teamId, 'training', sessionId, 'drill', drillId]);
   }
 

@@ -1,5 +1,5 @@
 import {
-  Component, EventEmitter, Input, OnInit, Output, signal,
+  Component, EventEmitter, Input, OnInit, Output, inject, signal,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { DbService } from '../../../core/services/db.service';
@@ -21,13 +21,13 @@ interface DisplayMessage {
   styleUrl: './ai-coach-modal.component.scss',
 })
 export class AiCoachModalComponent implements OnInit {
-  @Input() teamId!: number;
+  @Input() teamId!: string;
   @Input() courtMode: 'half' | 'full' = 'half';
   @Input() getPlay?: () => PlayEditorState;
   @Output() playGenerated = new EventEmitter<PlayEditorState>();
 
-  private readonly db = new DbService();
-  private readonly ragService: RagService;
+  private readonly db = inject(DbService);
+  private readonly ragService = inject(RagService);
 
   private history: ChatMessage[] = [];
   roster: RosterPlayer[] = [];
@@ -35,10 +35,6 @@ export class AiCoachModalComponent implements OnInit {
   readonly messages = signal<DisplayMessage[]>([]);
   readonly loading = signal(false);
   inputText = '';
-
-  constructor(ragService: RagService) {
-    this.ragService = ragService;
-  }
 
   async ngOnInit(): Promise<void> {
     const players: Player[] = await this.db.listPlayers(this.teamId);

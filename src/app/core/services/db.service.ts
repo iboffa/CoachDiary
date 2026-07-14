@@ -1,4 +1,3 @@
-import Dexie, { Table } from 'dexie';
 import { Injectable } from '@angular/core';
 import {
   Player, PlayerNote, Play, PlaySummary,
@@ -6,496 +5,572 @@ import {
   Team, TeamNote, Opponent, OpponentPlayer, OpponentNote, SavedDrill,
   PlayCategory, DrillCategory, Game, CalendarCustomEvent, RecurringSchedule, Task,
 } from '../../shared/models/models';
-
-class CoachDiaryDb extends Dexie {
-  players!: Table<Player, number>;
-  playerNotes!: Table<PlayerNote, number>;
-  plays!: Table<Play, number>;
-  trainingSessions!: Table<TrainingSession, number>;
-  savedDrills!: Table<SavedDrill, number>;
-  seasonPlans!: Table<SeasonPlan, number>;
-  gameNotes!: Table<GameNote, number>;
-  teams!: Table<Team, number>;
-  teamNotes!: Table<TeamNote, number>;
-  opponents!: Table<Opponent, number>;
-  opponentNotes!: Table<OpponentNote, number>;
-  opponentPlayers!: Table<OpponentPlayer, number>;
-  playCategories!: Table<PlayCategory, number>;
-  drillCategories!: Table<DrillCategory, number>;
-  games!: Table<Game, number>;
-  calendarEvents!: Table<CalendarCustomEvent, number>;
-  recurringSchedules!: Table<RecurringSchedule, number>;
-  tasks!: Table<Task, number>;
-
-  constructor() {
-    super('CoachDiaryDB');
-    this.version(1).stores({
-      players: '++id, number, position',
-      playerNotes: '++id, player_id, date, category',
-      plays: '++id, category, updated_at',
-      trainingSessions: '++id, date',
-      seasonPlans: '++id, start_date',
-      gameNotes: '++id, date',
-    });
-    this.version(2).stores({
-      players: '++id, team_id, number, position',
-      plays: '++id, team_id, opponent_id, category, updated_at',
-      teams: '++id',
-      opponents: '++id, team_id',
-      opponentNotes: '++id, opponent_id, date',
-      opponentPlayers: '++id, opponent_id',
-    });
-    this.version(3).stores({
-      trainingSessions: '++id, team_id, date',
-    });
-    this.version(4).stores({
-      savedDrills: '++id, name',
-    });
-    this.version(5).stores({
-      teamNotes: '++id, team_id, date',
-    });
-    this.version(6).stores({
-      plays: '++id, team_id, opponent_id, category_id, updated_at',
-      savedDrills: '++id, name, category_id',
-      playCategories: '++id, team_id',
-      drillCategories: '++id',
-    }).upgrade(tx => tx.table('plays').toCollection().modify(play => {
-      delete (play as Record<string, unknown>)['category'];
-    }));
-    this.version(7).stores({
-      seasonPlans: '++id, team_id, start_date',
-    });
-    this.version(8).stores({
-      games: '++id, teamId, date',
-    });
-    this.version(9).stores({
-      calendarEvents: '++id, teamId, date',
-    });
-    this.version(10).stores({
-      recurringSchedules: '++id, teamId',
-    });
-    this.version(11).stores({
-      tasks: '++id, teamId, playerId, dueDate',
-    });
-    this.version(12).stores({});
-    this.version(13).stores({
-      players: '++id, team_id, number, position, role',
-    });
-  }
-}
+import { SupabaseService } from './supabase.service';
+import { AuthService } from './auth.service';
 
 @Injectable({ providedIn: 'root' })
 export class DbService {
-  private db = new CoachDiaryDb();
+  private get db() { return this.supabase.client; }
+
+  constructor(private supabase: SupabaseService, private auth: AuthService) {}
 
   // ── Teams ─────────────────────────────────────────────────────
-  listTeams(): Promise<Team[]> {
-    return this.db.teams.toArray().then(t => t.sort((a, b) => a.name.localeCompare(b.name)));
+
+  async listTeams(): Promise<Team[]> {
+    const { data, error } = await this.db.from('teams').select('*').order('name');
+    if (error) throw error;
+    return data as Team[];
   }
 
-  getTeam(id: number): Promise<Team | undefined> {
-    return this.db.teams.get(id);
+  async getTeam(id: string): Promise<Team | undefined> {
+    const { data, error } = await this.db.from('teams').select('*').eq('id', id).maybeSingle();
+    if (error) throw error;
+    return data as Team ?? undefined;
   }
 
-  async saveTeam(team: Team): Promise<number> {
+  async saveTeam(team: Team): Promise<string> {
     const now = new Date().toISOString();
     if (team.id) {
-      await this.db.teams.update(team.id, { ...team, updated_at: now });
+      const { error } = await this.db.from('teams').update({ ...team, updated_at: now }).eq('id', team.id);
+      if (error) throw error;
       return team.id;
     }
-    return this.db.teams.add({ ...team, created_at: now, updated_at: now });
+    const { data, error } = await this.db.from('teams')
+      .insert({ ...team, owner_id: this.auth.currentUserId(), created_at: now, updated_at: now })
+      .select('id').single();
+    if (error) throw error;
+    return (data as { id: string }).id;
   }
 
-  deleteTeam(id: number): Promise<void> {
-    return this.db.teams.delete(id);
+  async deleteTeam(id: string): Promise<void> {
+    const { error } = await this.db.from('teams').delete().eq('id', id);
+    if (error) throw error;
   }
 
   // ── Team Notes ────────────────────────────────────────────────
-  listTeamNotes(teamId: number): Promise<TeamNote[]> {
-    return this.db.teamNotes.where('team_id').equals(teamId).reverse().sortBy('date');
+
+  async listTeamNotes(teamId: string): Promise<TeamNote[]> {
+    const { data, error } = await this.db.from('team_notes')
+      .select('*').eq('team_id', teamId).order('date', { ascending: false });
+    if (error) throw error;
+    return data as TeamNote[];
   }
 
-  async saveTeamNote(note: TeamNote): Promise<number> {
+  async saveTeamNote(note: TeamNote): Promise<string> {
     const now = new Date().toISOString();
     if (note.id) {
-      await this.db.teamNotes.update(note.id, note);
+      const { error } = await this.db.from('team_notes').update(note).eq('id', note.id);
+      if (error) throw error;
       return note.id;
     }
-    return this.db.teamNotes.add({ ...note, created_at: now });
+    const { data, error } = await this.db.from('team_notes')
+      .insert({ ...note, created_at: now }).select('id').single();
+    if (error) throw error;
+    return (data as { id: string }).id;
   }
 
-  deleteTeamNote(id: number): Promise<void> {
-    return this.db.teamNotes.delete(id);
+  async deleteTeamNote(id: string): Promise<void> {
+    const { error } = await this.db.from('team_notes').delete().eq('id', id);
+    if (error) throw error;
   }
 
   // ── Opponents ─────────────────────────────────────────────────
-  listOpponents(teamId: number): Promise<Opponent[]> {
-    return this.db.opponents.where('team_id').equals(teamId).sortBy('name');
+
+  async listOpponents(teamId: string): Promise<Opponent[]> {
+    const { data, error } = await this.db.from('opponents')
+      .select('*').eq('team_id', teamId).order('name');
+    if (error) throw error;
+    return data as Opponent[];
   }
 
-  getOpponent(id: number): Promise<Opponent | undefined> {
-    return this.db.opponents.get(id);
+  async getOpponent(id: string): Promise<Opponent | undefined> {
+    const { data, error } = await this.db.from('opponents').select('*').eq('id', id).maybeSingle();
+    if (error) throw error;
+    return data as Opponent ?? undefined;
   }
 
-  async saveOpponent(opponent: Opponent): Promise<number> {
+  async saveOpponent(opponent: Opponent): Promise<string> {
     const now = new Date().toISOString();
     if (opponent.id) {
-      await this.db.opponents.update(opponent.id, { ...opponent, updated_at: now });
+      const { error } = await this.db.from('opponents')
+        .update({ ...opponent, updated_at: now }).eq('id', opponent.id);
+      if (error) throw error;
       return opponent.id;
     }
-    return this.db.opponents.add({ ...opponent, created_at: now, updated_at: now });
+    const { data, error } = await this.db.from('opponents')
+      .insert({ ...opponent, created_at: now, updated_at: now }).select('id').single();
+    if (error) throw error;
+    return (data as { id: string }).id;
   }
 
-  deleteOpponent(id: number): Promise<void> {
-    return this.db.opponents.delete(id);
+  async deleteOpponent(id: string): Promise<void> {
+    const { error } = await this.db.from('opponents').delete().eq('id', id);
+    if (error) throw error;
   }
 
   // ── Opponent Notes ────────────────────────────────────────────
-  listOpponentNotes(opponentId: number): Promise<OpponentNote[]> {
-    return this.db.opponentNotes.where('opponent_id').equals(opponentId).reverse().sortBy('date');
+
+  async listOpponentNotes(opponentId: string): Promise<OpponentNote[]> {
+    const { data, error } = await this.db.from('opponent_notes')
+      .select('*').eq('opponent_id', opponentId).order('date', { ascending: false });
+    if (error) throw error;
+    return data as OpponentNote[];
   }
 
-  async saveOpponentNote(note: OpponentNote): Promise<number> {
+  async saveOpponentNote(note: OpponentNote): Promise<string> {
     const now = new Date().toISOString();
     if (note.id) {
-      await this.db.opponentNotes.update(note.id, note);
+      const { error } = await this.db.from('opponent_notes').update(note).eq('id', note.id);
+      if (error) throw error;
       return note.id;
     }
-    return this.db.opponentNotes.add({ ...note, created_at: now });
+    const { data, error } = await this.db.from('opponent_notes')
+      .insert({ ...note, created_at: now }).select('id').single();
+    if (error) throw error;
+    return (data as { id: string }).id;
   }
 
-  deleteOpponentNote(id: number): Promise<void> {
-    return this.db.opponentNotes.delete(id);
+  async deleteOpponentNote(id: string): Promise<void> {
+    const { error } = await this.db.from('opponent_notes').delete().eq('id', id);
+    if (error) throw error;
   }
 
   // ── Opponent Players ──────────────────────────────────────────
-  listOpponentPlayers(opponentId: number): Promise<OpponentPlayer[]> {
-    return this.db.opponentPlayers.where('opponent_id').equals(opponentId).sortBy('number');
+
+  async listOpponentPlayers(opponentId: string): Promise<OpponentPlayer[]> {
+    const { data, error } = await this.db.from('opponent_players')
+      .select('*').eq('opponent_id', opponentId).order('number');
+    if (error) throw error;
+    return data as OpponentPlayer[];
   }
 
-  async saveOpponentPlayer(player: OpponentPlayer): Promise<number> {
+  async saveOpponentPlayer(player: OpponentPlayer): Promise<string> {
     if (player.id) {
-      await this.db.opponentPlayers.update(player.id, player);
+      const { error } = await this.db.from('opponent_players').update(player).eq('id', player.id);
+      if (error) throw error;
       return player.id;
     }
-    return this.db.opponentPlayers.add(player);
+    const { data, error } = await this.db.from('opponent_players')
+      .insert(player).select('id').single();
+    if (error) throw error;
+    return (data as { id: string }).id;
   }
 
-  deleteOpponentPlayer(id: number): Promise<void> {
-    return this.db.opponentPlayers.delete(id);
+  async deleteOpponentPlayer(id: string): Promise<void> {
+    const { error } = await this.db.from('opponent_players').delete().eq('id', id);
+    if (error) throw error;
   }
 
   // ── Players ──────────────────────────────────────────────────
-  listPlayers(teamId?: number): Promise<Player[]> {
-    if (teamId !== undefined) {
-      return this.db.players.where('team_id').equals(teamId).sortBy('number');
-    }
-    return this.db.players.orderBy('number').toArray();
+
+  async listPlayers(teamId?: string): Promise<Player[]> {
+    let query = this.db.from('players').select('*').order('number');
+    if (teamId !== undefined) query = query.eq('team_id', teamId);
+    const { data, error } = await query;
+    if (error) throw error;
+    return data as Player[];
   }
 
-  getPlayer(id: number): Promise<Player | undefined> {
-    return this.db.players.get(id);
+  async getPlayer(id: string): Promise<Player | undefined> {
+    const { data, error } = await this.db.from('players').select('*').eq('id', id).maybeSingle();
+    if (error) throw error;
+    return data as Player ?? undefined;
   }
 
-  async savePlayer(player: Player): Promise<number> {
+  async savePlayer(player: Player): Promise<string> {
     const now = new Date().toISOString();
     if (player.id) {
-      await this.db.players.update(player.id, { ...player, updated_at: now });
+      const { error } = await this.db.from('players')
+        .update({ ...player, updated_at: now }).eq('id', player.id);
+      if (error) throw error;
       return player.id;
     }
-    return this.db.players.add({ ...player, created_at: now, updated_at: now });
+    const { data, error } = await this.db.from('players')
+      .insert({ ...player, created_at: now, updated_at: now }).select('id').single();
+    if (error) throw error;
+    return (data as { id: string }).id;
   }
 
-  deletePlayer(id: number): Promise<void> {
-    return this.db.players.delete(id);
+  async deletePlayer(id: string): Promise<void> {
+    const { error } = await this.db.from('players').delete().eq('id', id);
+    if (error) throw error;
   }
 
-  // ── Player notes ─────────────────────────────────────────────
-  listPlayerNotes(playerId: number): Promise<PlayerNote[]> {
-    return this.db.playerNotes.where('player_id').equals(playerId).reverse().sortBy('date');
+  // ── Player Notes ─────────────────────────────────────────────
+
+  async listPlayerNotes(playerId: string): Promise<PlayerNote[]> {
+    const { data, error } = await this.db.from('player_notes')
+      .select('*').eq('player_id', playerId).order('date', { ascending: false });
+    if (error) throw error;
+    return data as PlayerNote[];
   }
 
-  async savePlayerNote(note: PlayerNote): Promise<number> {
+  async savePlayerNote(note: PlayerNote): Promise<string> {
     const now = new Date().toISOString();
     if (note.id) {
-      await this.db.playerNotes.update(note.id, note);
+      const { error } = await this.db.from('player_notes').update(note).eq('id', note.id);
+      if (error) throw error;
       return note.id;
     }
-    return this.db.playerNotes.add({ ...note, created_at: now });
+    const { data, error } = await this.db.from('player_notes')
+      .insert({ ...note, created_at: now }).select('id').single();
+    if (error) throw error;
+    return (data as { id: string }).id;
   }
 
-  deletePlayerNote(id: number): Promise<void> {
-    return this.db.playerNotes.delete(id);
+  async deletePlayerNote(id: string): Promise<void> {
+    const { error } = await this.db.from('player_notes').delete().eq('id', id);
+    if (error) throw error;
   }
 
   // ── Plays ────────────────────────────────────────────────────
-  async listPlays(filter?: { teamId?: number; opponentId?: number }): Promise<PlaySummary[]> {
-    let plays: Play[];
-    if (filter?.teamId !== undefined) {
-      plays = await this.db.plays.where('team_id').equals(filter.teamId).reverse().sortBy('updated_at');
-    } else if (filter?.opponentId !== undefined) {
-      plays = await this.db.plays.where('opponent_id').equals(filter.opponentId).reverse().sortBy('updated_at');
-    } else {
-      plays = await this.db.plays.orderBy('updated_at').reverse().toArray();
-    }
-    return plays
-      .filter(p => !p.is_template)
-      .map(({ canvas_state: _cs, ...rest }) => rest as PlaySummary);
+
+  async listPlays(filter?: { teamId?: string; opponentId?: string }): Promise<PlaySummary[]> {
+    const cols = 'id,team_id,opponent_id,category_id,name,description,thumbnail,is_template,created_at,updated_at';
+    let query = this.db.from('plays').select(cols).eq('is_template', false).order('updated_at', { ascending: false });
+    if (filter?.teamId) query = query.eq('team_id', filter.teamId);
+    if (filter?.opponentId) query = query.eq('opponent_id', filter.opponentId);
+    const { data, error } = await query;
+    if (error) throw error;
+    return data as PlaySummary[];
   }
 
-  async listTemplates(filter?: { teamId?: number; opponentId?: number }): Promise<PlaySummary[]> {
-    let plays: Play[];
-    if (filter?.teamId !== undefined) {
-      plays = await this.db.plays.where('team_id').equals(filter.teamId).reverse().sortBy('updated_at');
-    } else if (filter?.opponentId !== undefined) {
-      plays = await this.db.plays.where('opponent_id').equals(filter.opponentId).reverse().sortBy('updated_at');
-    } else {
-      plays = await this.db.plays.orderBy('updated_at').reverse().toArray();
-    }
-    return plays
-      .filter(p => p.is_template)
-      .map(({ canvas_state: _cs, ...rest }) => rest as PlaySummary);
+  async listTemplates(filter?: { teamId?: string; opponentId?: string }): Promise<PlaySummary[]> {
+    const cols = 'id,team_id,opponent_id,category_id,name,description,thumbnail,is_template,created_at,updated_at';
+    let query = this.db.from('plays').select(cols).eq('is_template', true).order('updated_at', { ascending: false });
+    if (filter?.teamId) query = query.eq('team_id', filter.teamId);
+    if (filter?.opponentId) query = query.eq('opponent_id', filter.opponentId);
+    const { data, error } = await query;
+    if (error) throw error;
+    return data as PlaySummary[];
   }
 
-  getPlay(id: number): Promise<Play | undefined> {
-    return this.db.plays.get(id);
+  async getPlay(id: string): Promise<Play | undefined> {
+    const { data, error } = await this.db.from('plays').select('*').eq('id', id).maybeSingle();
+    if (error) throw error;
+    return data as Play ?? undefined;
   }
 
-  async savePlay(play: Play): Promise<number> {
+  async savePlay(play: Play): Promise<string> {
     const now = new Date().toISOString();
     if (play.id) {
-      const playId = play.id;
-      await this.db.plays.where('id').equals(playId).modify(stored => {
-        Object.assign(stored, { ...play, updated_at: now });
-        if (play.category_id === undefined) {
-          delete (stored as unknown as Record<string, unknown>)['category_id'];
-        }
-      });
-      return playId;
+      const { error } = await this.db.from('plays')
+        .update({ ...play, updated_at: now }).eq('id', play.id);
+      if (error) throw error;
+      return play.id;
     }
-    return this.db.plays.add({ ...play, created_at: now, updated_at: now });
+    const { data, error } = await this.db.from('plays')
+      .insert({ ...play, created_at: now, updated_at: now }).select('id').single();
+    if (error) throw error;
+    return (data as { id: string }).id;
   }
 
-  deletePlay(id: number): Promise<void> {
-    return this.db.plays.delete(id);
+  async deletePlay(id: string): Promise<void> {
+    const { error } = await this.db.from('plays').delete().eq('id', id);
+    if (error) throw error;
   }
 
-  // ── Training sessions ─────────────────────────────────────────
-  async listTrainingSessions(teamId?: number): Promise<TrainingSession[]> {
-    let all: TrainingSession[];
-    if (teamId !== undefined) {
-      all = await this.db.trainingSessions.where('team_id').equals(teamId).reverse().sortBy('date');
-    } else {
-      all = await this.db.trainingSessions.orderBy('date').reverse().toArray();
-    }
-    return all.filter(s => !s.is_template);
+  // ── Training Sessions ─────────────────────────────────────────
+
+  async listTrainingSessions(teamId?: string): Promise<TrainingSession[]> {
+    let query = this.db.from('training_sessions').select('*')
+      .eq('is_template', false).order('date', { ascending: false });
+    if (teamId !== undefined) query = query.eq('team_id', teamId);
+    const { data, error } = await query;
+    if (error) throw error;
+    return data as TrainingSession[];
   }
 
-  async listTrainingSessionTemplates(teamId?: number): Promise<TrainingSession[]> {
-    let all: TrainingSession[];
-    if (teamId !== undefined) {
-      all = await this.db.trainingSessions.where('team_id').equals(teamId).reverse().sortBy('date');
-    } else {
-      all = await this.db.trainingSessions.orderBy('date').reverse().toArray();
-    }
-    return all.filter(s => !!s.is_template);
+  async listTrainingSessionTemplates(teamId?: string): Promise<TrainingSession[]> {
+    let query = this.db.from('training_sessions').select('*')
+      .eq('is_template', true).order('date', { ascending: false });
+    if (teamId !== undefined) query = query.eq('team_id', teamId);
+    const { data, error } = await query;
+    if (error) throw error;
+    return data as TrainingSession[];
   }
 
-  getTrainingSession(id: number): Promise<TrainingSession | undefined> {
-    return this.db.trainingSessions.get(id);
+  async getTrainingSession(id: string): Promise<TrainingSession | undefined> {
+    const { data, error } = await this.db.from('training_sessions').select('*').eq('id', id).maybeSingle();
+    if (error) throw error;
+    return data as TrainingSession ?? undefined;
   }
 
-  async saveTrainingSession(session: TrainingSession): Promise<number> {
+  async saveTrainingSession(session: TrainingSession): Promise<string> {
     const now = new Date().toISOString();
     if (session.id) {
-      await this.db.trainingSessions.update(session.id, { ...session, updated_at: now });
+      const { error } = await this.db.from('training_sessions')
+        .update({ ...session, updated_at: now }).eq('id', session.id);
+      if (error) throw error;
       return session.id;
     }
-    return this.db.trainingSessions.add({ ...session, created_at: now, updated_at: now });
+    const { data, error } = await this.db.from('training_sessions')
+      .insert({ ...session, created_at: now, updated_at: now }).select('id').single();
+    if (error) throw error;
+    return (data as { id: string }).id;
   }
 
-  deleteTrainingSession(id: number): Promise<void> {
-    return this.db.trainingSessions.delete(id);
+  async deleteTrainingSession(id: string): Promise<void> {
+    const { error } = await this.db.from('training_sessions').delete().eq('id', id);
+    if (error) throw error;
   }
 
-  // ── Saved drills ─────────────────────────────────────────────
-  listSavedDrills(): Promise<SavedDrill[]> {
-    return this.db.savedDrills.orderBy('name').toArray();
+  // ── Saved Drills ─────────────────────────────────────────────
+
+  async listSavedDrills(): Promise<SavedDrill[]> {
+    const { data, error } = await this.db.from('saved_drills').select('*').order('name');
+    if (error) throw error;
+    return data as SavedDrill[];
   }
 
-  async saveSavedDrill(drill: SavedDrill): Promise<number> {
-    const now = new Date().toISOString();
+  async saveSavedDrill(drill: SavedDrill): Promise<string> {
     if (drill.id) {
-      await this.db.savedDrills.update(drill.id, { ...drill });
+      const { error } = await this.db.from('saved_drills').update(drill).eq('id', drill.id);
+      if (error) throw error;
       return drill.id;
     }
-    return this.db.savedDrills.add({ ...drill, created_at: now });
+    const { data, error } = await this.db.from('saved_drills')
+      .insert({ ...drill, created_by: this.auth.currentUserId(), created_at: new Date().toISOString() })
+      .select('id').single();
+    if (error) throw error;
+    return (data as { id: string }).id;
   }
 
-  deleteSavedDrill(id: number): Promise<void> {
-    return this.db.savedDrills.delete(id);
+  async deleteSavedDrill(id: string): Promise<void> {
+    const { error } = await this.db.from('saved_drills').delete().eq('id', id);
+    if (error) throw error;
   }
 
-  // ── Season plans ──────────────────────────────────────────────
-  listSeasonPlans(teamId?: number): Promise<SeasonPlan[]> {
-    if (teamId !== undefined) {
-      return this.db.seasonPlans.where('team_id').equals(teamId).reverse().sortBy('start_date');
-    }
-    return this.db.seasonPlans.orderBy('start_date').reverse().toArray();
+  // ── Season Plans ──────────────────────────────────────────────
+
+  async listSeasonPlans(teamId?: string): Promise<SeasonPlan[]> {
+    let query = this.db.from('season_plans').select('*').order('start_date', { ascending: false });
+    if (teamId !== undefined) query = query.eq('team_id', teamId);
+    const { data, error } = await query;
+    if (error) throw error;
+    return data as SeasonPlan[];
   }
 
-  getSeasonPlan(id: number): Promise<SeasonPlan | undefined> {
-    return this.db.seasonPlans.get(id);
+  async getSeasonPlan(id: string): Promise<SeasonPlan | undefined> {
+    const { data, error } = await this.db.from('season_plans').select('*').eq('id', id).maybeSingle();
+    if (error) throw error;
+    return data as SeasonPlan ?? undefined;
   }
 
-  async saveSeasonPlan(plan: SeasonPlan): Promise<number> {
+  async saveSeasonPlan(plan: SeasonPlan): Promise<string> {
     const now = new Date().toISOString();
     if (plan.id) {
-      await this.db.seasonPlans.update(plan.id, { ...plan, updated_at: now });
+      const { error } = await this.db.from('season_plans')
+        .update({ ...plan, updated_at: now }).eq('id', plan.id);
+      if (error) throw error;
       return plan.id;
     }
-    return this.db.seasonPlans.add({ ...plan, created_at: now, updated_at: now });
+    const { data, error } = await this.db.from('season_plans')
+      .insert({ ...plan, created_at: now, updated_at: now }).select('id').single();
+    if (error) throw error;
+    return (data as { id: string }).id;
   }
 
-  deleteSeasonPlan(id: number): Promise<void> {
-    return this.db.seasonPlans.delete(id);
+  async deleteSeasonPlan(id: string): Promise<void> {
+    const { error } = await this.db.from('season_plans').delete().eq('id', id);
+    if (error) throw error;
   }
 
-  // ── Game notes ────────────────────────────────────────────────
-  listGameNotes(): Promise<GameNote[]> {
-    return this.db.gameNotes.orderBy('date').reverse().toArray();
+  // ── Game Notes ────────────────────────────────────────────────
+
+  async listGameNotes(): Promise<GameNote[]> {
+    const { data, error } = await this.db.from('game_notes').select('*').order('date', { ascending: false });
+    if (error) throw error;
+    return data as GameNote[];
   }
 
-  async saveGameNote(note: GameNote): Promise<number> {
+  async saveGameNote(note: GameNote): Promise<string> {
     const now = new Date().toISOString();
     if (note.id) {
-      await this.db.gameNotes.update(note.id, note);
+      const { error } = await this.db.from('game_notes').update(note).eq('id', note.id);
+      if (error) throw error;
       return note.id;
     }
-    return this.db.gameNotes.add({ ...note, created_at: now });
+    const { data, error } = await this.db.from('game_notes')
+      .insert({ ...note, created_at: now }).select('id').single();
+    if (error) throw error;
+    return (data as { id: string }).id;
   }
 
-  deleteGameNote(id: number): Promise<void> {
-    return this.db.gameNotes.delete(id);
+  async deleteGameNote(id: string): Promise<void> {
+    const { error } = await this.db.from('game_notes').delete().eq('id', id);
+    if (error) throw error;
   }
 
-  // ── Play categories ───────────────────────────────────────────
-  listPlayCategories(teamId: number): Promise<PlayCategory[]> {
-    return this.db.playCategories.where('team_id').equals(teamId).sortBy('name');
+  // ── Play Categories ───────────────────────────────────────────
+
+  async listPlayCategories(teamId: string): Promise<PlayCategory[]> {
+    const { data, error } = await this.db.from('play_categories')
+      .select('*').eq('team_id', teamId).order('name');
+    if (error) throw error;
+    return data as PlayCategory[];
   }
 
-  async savePlayCategory(cat: PlayCategory): Promise<number> {
+  async savePlayCategory(cat: PlayCategory): Promise<string> {
     if (cat.id) {
-      await this.db.playCategories.update(cat.id, cat);
+      const { error } = await this.db.from('play_categories').update(cat).eq('id', cat.id);
+      if (error) throw error;
       return cat.id;
     }
-    return this.db.playCategories.add(cat);
+    const { data, error } = await this.db.from('play_categories').insert(cat).select('id').single();
+    if (error) throw error;
+    return (data as { id: string }).id;
   }
 
-  async deletePlayCategory(id: number): Promise<void> {
-    await this.db.plays.where('category_id').equals(id).modify({ category_id: undefined });
-    await this.db.playCategories.delete(id);
+  async deletePlayCategory(id: string): Promise<void> {
+    // Nullify references before deleting (Postgres FK is ON DELETE SET NULL, so this is handled by the DB)
+    const { error } = await this.db.from('play_categories').delete().eq('id', id);
+    if (error) throw error;
   }
 
   // ── Games ─────────────────────────────────────────────────────
-  listGames(teamId: number): Promise<Game[]> {
-    return this.db.games.where('teamId').equals(teamId).reverse().sortBy('date');
+
+  async listGames(teamId: string): Promise<Game[]> {
+    const { data, error } = await this.db.from('games')
+      .select('*').eq('team_id', teamId).order('date', { ascending: false });
+    if (error) throw error;
+    return data as Game[];
   }
 
-  getGame(id: number): Promise<Game | undefined> {
-    return this.db.games.get(id);
+  async getGame(id: string): Promise<Game | undefined> {
+    const { data, error } = await this.db.from('games').select('*').eq('id', id).maybeSingle();
+    if (error) throw error;
+    return data as Game ?? undefined;
   }
 
-  addGame(game: Omit<Game, 'id'>): Promise<number> {
-    return this.db.games.add(game as Game);
+  async addGame(game: Omit<Game, 'id'>): Promise<string> {
+    const { data, error } = await this.db.from('games').insert(game).select('id').single();
+    if (error) throw error;
+    return (data as { id: string }).id;
   }
 
-  async updateGame(id: number, changes: Partial<Omit<Game, 'id'>>): Promise<void> {
-    await this.db.games.update(id, changes);
+  async updateGame(id: string, changes: Partial<Omit<Game, 'id'>>): Promise<void> {
+    const { error } = await this.db.from('games').update(changes).eq('id', id);
+    if (error) throw error;
   }
 
-  deleteGame(id: number): Promise<void> {
-    return this.db.games.delete(id);
+  async deleteGame(id: string): Promise<void> {
+    const { error } = await this.db.from('games').delete().eq('id', id);
+    if (error) throw error;
   }
 
-  // ── Calendar custom events ────────────────────────────────────
-  listCalendarEvents(teamId: number): Promise<CalendarCustomEvent[]> {
-    return this.db.calendarEvents.where('teamId').equals(teamId).sortBy('date');
+  // ── Calendar Events ───────────────────────────────────────────
+
+  async listCalendarEvents(teamId: string): Promise<CalendarCustomEvent[]> {
+    const { data, error } = await this.db.from('calendar_events')
+      .select('*').eq('team_id', teamId).order('date');
+    if (error) throw error;
+    return data as CalendarCustomEvent[];
   }
 
-  addCalendarEvent(event: Omit<CalendarCustomEvent, 'id'>): Promise<number> {
-    return this.db.calendarEvents.add(event as CalendarCustomEvent);
+  async addCalendarEvent(event: Omit<CalendarCustomEvent, 'id'>): Promise<string> {
+    const { data, error } = await this.db.from('calendar_events').insert(event).select('id').single();
+    if (error) throw error;
+    return (data as { id: string }).id;
   }
 
-  async updateCalendarEvent(id: number, changes: Partial<CalendarCustomEvent>): Promise<void> {
-    await this.db.calendarEvents.update(id, changes);
+  async updateCalendarEvent(id: string, changes: Partial<CalendarCustomEvent>): Promise<void> {
+    const { error } = await this.db.from('calendar_events').update(changes).eq('id', id);
+    if (error) throw error;
   }
 
-  deleteCalendarEvent(id: number): Promise<void> {
-    return this.db.calendarEvents.delete(id);
+  async deleteCalendarEvent(id: string): Promise<void> {
+    const { error } = await this.db.from('calendar_events').delete().eq('id', id);
+    if (error) throw error;
   }
 
-  // ── Recurring schedules ───────────────────────────────────────
-  listRecurringSchedules(teamId: number): Promise<RecurringSchedule[]> {
-    return this.db.recurringSchedules.where('teamId').equals(teamId).toArray();
+  // ── Recurring Schedules ───────────────────────────────────────
+
+  async listRecurringSchedules(teamId: string): Promise<RecurringSchedule[]> {
+    const { data, error } = await this.db.from('recurring_schedules')
+      .select('*').eq('team_id', teamId);
+    if (error) throw error;
+    return data as RecurringSchedule[];
   }
 
-  addRecurringSchedule(s: Omit<RecurringSchedule, 'id'>): Promise<number> {
-    return this.db.recurringSchedules.add(s as RecurringSchedule);
+  async addRecurringSchedule(s: Omit<RecurringSchedule, 'id'>): Promise<string> {
+    const { data, error } = await this.db.from('recurring_schedules').insert(s).select('id').single();
+    if (error) throw error;
+    return (data as { id: string }).id;
   }
 
-  async updateRecurringSchedule(id: number, changes: Partial<RecurringSchedule>): Promise<void> {
-    await this.db.recurringSchedules.update(id, changes);
+  async updateRecurringSchedule(id: string, changes: Partial<RecurringSchedule>): Promise<void> {
+    const { error } = await this.db.from('recurring_schedules').update(changes).eq('id', id);
+    if (error) throw error;
   }
 
-  deleteRecurringSchedule(id: number): Promise<void> {
-    return this.db.recurringSchedules.delete(id);
+  async deleteRecurringSchedule(id: string): Promise<void> {
+    const { error } = await this.db.from('recurring_schedules').delete().eq('id', id);
+    if (error) throw error;
   }
 
-  // ── Drill categories ──────────────────────────────────────────
-  listDrillCategories(): Promise<DrillCategory[]> {
-    return this.db.drillCategories.toArray().then(cats => cats.sort((a, b) => a.name.localeCompare(b.name)));
+  // ── Drill Categories ──────────────────────────────────────────
+
+  async listDrillCategories(): Promise<DrillCategory[]> {
+    const { data, error } = await this.db.from('drill_categories').select('*').order('name');
+    if (error) throw error;
+    return data as DrillCategory[];
   }
 
-  async saveDrillCategory(cat: DrillCategory): Promise<number> {
+  async saveDrillCategory(cat: DrillCategory): Promise<string> {
     if (cat.id) {
-      await this.db.drillCategories.update(cat.id, cat);
+      const { error } = await this.db.from('drill_categories').update(cat).eq('id', cat.id);
+      if (error) throw error;
       return cat.id;
     }
-    return this.db.drillCategories.add(cat);
+    const { data, error } = await this.db.from('drill_categories')
+      .insert({ ...cat, created_by: this.auth.currentUserId() }).select('id').single();
+    if (error) throw error;
+    return (data as { id: string }).id;
   }
 
-  async deleteDrillCategory(id: number): Promise<void> {
-    await this.db.savedDrills.where('category_id').equals(id).modify({ category_id: undefined });
-    await this.db.drillCategories.delete(id);
+  async deleteDrillCategory(id: string): Promise<void> {
+    const { error } = await this.db.from('drill_categories').delete().eq('id', id);
+    if (error) throw error;
   }
 
   // ── Tasks ─────────────────────────────────────────────────────
-  listTasksByTeam(teamId: number): Promise<Task[]> {
-    return this.db.tasks.where('teamId').equals(teamId).toArray();
+
+  async listTasksByTeam(teamId: string): Promise<Task[]> {
+    const { data, error } = await this.db.from('tasks').select('*').eq('team_id', teamId);
+    if (error) throw error;
+    return data as Task[];
   }
 
-  async listTasksByPlayer(teamId: number, playerId: number): Promise<Task[]> {
-    const all = await this.db.tasks.where('teamId').equals(teamId).toArray();
-    return all.filter(t => t.playerId === playerId);
+  async listTasksByPlayer(teamId: string, playerId: string): Promise<Task[]> {
+    const { data, error } = await this.db.from('tasks').select('*')
+      .eq('team_id', teamId).eq('player_id', playerId);
+    if (error) throw error;
+    return data as Task[];
   }
 
-  addTask(task: Omit<Task, 'id'>): Promise<number> {
-    return this.db.tasks.add(task as Task);
+  async addTask(task: Omit<Task, 'id'>): Promise<string> {
+    const { data, error } = await this.db.from('tasks').insert(task).select('id').single();
+    if (error) throw error;
+    return (data as { id: string }).id;
   }
 
-  async updateTask(id: number, changes: Partial<Omit<Task, 'id'>>): Promise<void> {
-    await this.db.tasks.update(id, changes);
+  async updateTask(id: string, changes: Partial<Omit<Task, 'id'>>): Promise<void> {
+    const { error } = await this.db.from('tasks').update(changes).eq('id', id);
+    if (error) throw error;
   }
 
-  deleteTask(id: number): Promise<void> {
-    return this.db.tasks.delete(id);
+  async deleteTask(id: string): Promise<void> {
+    const { error } = await this.db.from('tasks').delete().eq('id', id);
+    if (error) throw error;
   }
 
-  async toggleTaskDone(id: number): Promise<void> {
-    const task = await this.db.tasks.get(id);
-    if (task) {
-      await this.db.tasks.update(id, { done: !task.done });
+  async toggleTaskDone(id: string): Promise<void> {
+    const { data } = await this.db.from('tasks').select('done').eq('id', id).single();
+    if (data) {
+      const { error } = await this.db.from('tasks')
+        .update({ done: !(data as { done: boolean }).done }).eq('id', id);
+      if (error) throw error;
     }
   }
 }

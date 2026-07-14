@@ -6,17 +6,13 @@ import { Play, PlayCategory, PlaySummary } from '../../shared/models/models';
 export class PlayService {
   constructor(private db: DbService) {}
 
-  list(filter?: { teamId?: number; opponentId?: number }): Promise<PlaySummary[]> {
-    return this.db.listPlays(filter);
-  }
-  listTemplates(filter?: { teamId?: number; opponentId?: number }): Promise<PlaySummary[]> {
-    return this.db.listTemplates(filter);
-  }
-  get(id: number): Promise<Play | undefined> { return this.db.getPlay(id); }
-  save(play: Play): Promise<number> { return this.db.savePlay(play); }
-  delete(id: number): Promise<void> { return this.db.deletePlay(id); }
+  list(filter?: { teamId?: string; opponentId?: string }): Promise<PlaySummary[]> { return this.db.listPlays(filter); }
+  listTemplates(filter?: { teamId?: string; opponentId?: string }): Promise<PlaySummary[]> { return this.db.listTemplates(filter); }
+  get(id: string): Promise<Play | undefined> { return this.db.getPlay(id); }
+  save(play: Play): Promise<string> { return this.db.savePlay(play); }
+  delete(id: string): Promise<void> { return this.db.deletePlay(id); }
 
-  listCategories(teamId: number): Promise<PlayCategory[]> { return this.db.listPlayCategories(teamId); }
-  saveCategory(cat: PlayCategory): Promise<number> { return this.db.savePlayCategory(cat); }
-  deleteCategory(id: number): Promise<void> { return this.db.deletePlayCategory(id); }
+  listCategories(teamId: string): Promise<PlayCategory[]> { return this.db.listPlayCategories(teamId); }
+  saveCategory(cat: PlayCategory): Promise<string> { return this.db.savePlayCategory(cat); }
+  deleteCategory(id: string): Promise<void> { return this.db.deletePlayCategory(id); }
 }

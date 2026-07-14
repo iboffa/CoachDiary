@@ -18,9 +18,9 @@ export class TasksComponent {
   private readonly playerService = inject(PlayerService);
   private readonly route = inject(ActivatedRoute);
 
-  readonly teamId: number = (() => {
+  readonly teamId: string = (() => {
     const raw = this.route.snapshot.paramMap.get('teamId');
-    return raw ? parseInt(raw, 10) : 0;
+    return raw ?? '';
   })();
 
   readonly tasks = signal<Task[]>([]);
@@ -29,16 +29,16 @@ export class TasksComponent {
   readonly sortedTasks = computed<Task[]>(() => {
     const all = this.tasks();
     const undone = all.filter(t => !t.done).sort((a, b) => {
-      if (!a.dueDate && !b.dueDate) return 0;
-      if (!a.dueDate) return 1;
-      if (!b.dueDate) return -1;
-      return a.dueDate.localeCompare(b.dueDate);
+      if (!a.due_date && !b.due_date) return 0;
+      if (!a.due_date) return 1;
+      if (!b.due_date) return -1;
+      return a.due_date.localeCompare(b.due_date);
     });
     const done = all.filter(t => t.done).sort((a, b) => {
-      if (!a.dueDate && !b.dueDate) return 0;
-      if (!a.dueDate) return 1;
-      if (!b.dueDate) return -1;
-      return a.dueDate.localeCompare(b.dueDate);
+      if (!a.due_date && !b.due_date) return 0;
+      if (!a.due_date) return 1;
+      if (!b.due_date) return -1;
+      return a.due_date.localeCompare(b.due_date);
     });
     return [...undone, ...done];
   });
@@ -49,7 +49,7 @@ export class TasksComponent {
 
   newTitle = '';
   newDueDate = '';
-  newPlayerId: number | '' = '';
+  newPlayerId: string | '' = '';
 
   constructor() {
     this.load();
@@ -67,12 +67,12 @@ export class TasksComponent {
   async addTask(): Promise<void> {
     if (!this.newTitle.trim()) return;
     await this.tasksService.addTask({
-      teamId: this.teamId,
+      team_id: this.teamId,
       title: this.newTitle.trim(),
-      dueDate: this.newDueDate || undefined,
+      due_date: this.newDueDate || undefined,
       done: false,
-      playerId: this.newPlayerId !== '' ? Number(this.newPlayerId) : undefined,
-      createdAt: new Date().toISOString(),
+      player_id: this.newPlayerId !== '' ? this.newPlayerId : undefined,
+      created_at: new Date().toISOString(),
     });
     this.newTitle = '';
     this.newDueDate = '';
@@ -85,12 +85,12 @@ export class TasksComponent {
     await this.reload();
   }
 
-  async deleteTask(id: number): Promise<void> {
+  async deleteTask(id: string): Promise<void> {
     await this.tasksService.deleteTask(id);
     await this.reload();
   }
 
-  playerName(playerId: number | undefined): string {
+  playerName(playerId: string | undefined): string {
     if (!playerId) return '';
     const p = this.players().find(pl => pl.id === playerId);
     return p ? p.name : '';

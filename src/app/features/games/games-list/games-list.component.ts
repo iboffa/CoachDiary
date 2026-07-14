@@ -15,9 +15,9 @@ export class GamesListComponent {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
 
-  readonly teamId: number = (() => {
+  readonly teamId: string = (() => {
     const raw = this.route.snapshot.paramMap.get('teamId');
-    return raw ? parseInt(raw, 10) : 0;
+    return raw ?? '';
   })();
 
   readonly games = signal<Game[]>([]);
@@ -35,13 +35,13 @@ export class GamesListComponent {
     this.router.navigate(['/teams', this.teamId, 'games', 'new']);
   }
 
-  openGame(id: number): void {
+  openGame(id: string): void {
     this.router.navigate(['/teams', this.teamId, 'games', id]);
   }
 
   score(game: Game): string {
-    if (game.scoreUs === null || game.scoreThem === null) return 'TBD';
-    return `${game.scoreUs} - ${game.scoreThem}`;
+    if (game.score_us === null || game.score_them === null) return 'TBD';
+    return `${game.score_us} - ${game.score_them}`;
   }
 
   back(): void {

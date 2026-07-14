@@ -213,7 +213,7 @@
                           <span class="li-name">{{ sd.name }}</span>
                           <span class="li-meta">{{ sd.duration_minutes }}min{{ sd.description ? ' · ' + sd.description : '' }}</span>
                         </div>
-                        <select class="li-cat-select" [ngModel]="sd.category_id?.toString() ?? ''" (ngModelChange)="setDrillCategory(sd, $event ? +$event : undefined)" (click)="$event.stopPropagation()">
+                        <select class="li-cat-select" [ngModel]="sd.category_id?.toString() ?? ''" (ngModelChange)="setDrillCategory(sd, $event ? $event : undefined)" (click)="$event.stopPropagation()">
                           <option value="">— None —</option>
                           @for (cat of drillCategories(); track cat.id) {
                             <option [value]="cat.id!.toString()">{{ cat.name }}</option>

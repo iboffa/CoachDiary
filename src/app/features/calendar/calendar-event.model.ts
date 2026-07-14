@@ -14,11 +14,11 @@ export interface CalendarEvent {
   date: Date;
   title: string;
   type: CalendarEventType;
-  startTime: string | null;     // "HH:MM" 24-hour, null if not set
-  durationMinutes: number | null;
+  start_time: string | null;     // "HH:MM" 24-hour, null if not set
+  duration_minutes: number | null;
   routerLink: string[] | null;  // null for custom events (use delete instead)
-  customEventId?: number;       // set for custom events to enable deletion
+  customEventId?: string;       // set for custom events to enable deletion
   isRecurring?: boolean;
-  recurringScheduleId?: number;
+  recurringScheduleId?: string;
   recurringDate?: string;       // "YYYY-MM-DD" — the specific occurrence date
 }

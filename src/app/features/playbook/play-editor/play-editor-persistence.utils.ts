@@ -38,10 +38,10 @@ interface BuildPlayEditorStateSnapshotOptions {
 }
 
 interface BuildPlaySavePayloadOptions {
-  playId: number | null;
+  playId: string | null;
   name: string;
   description: string;
-  category_id: number | undefined;
+  category_id: string | undefined;
   state: PlayEditorPersistedState;
   thumbnail: string;
 }

@@ -21,11 +21,9 @@ export class SeasonComponent {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
 
-  private readonly teamId: number | null = (() => {
+  private readonly teamId: string | null = (() => {
     const raw = this.route.snapshot.paramMap.get('teamId');
-    if (!raw) return null;
-    const n = parseInt(raw, 10);
-    return isNaN(n) ? null : n;
+    return raw ?? null;
   })();
 
   readonly plans    = signal<SeasonPlan[]>([]);
@@ -47,7 +45,7 @@ export class SeasonComponent {
   readonly scheduleSaving = signal(false);
   readonly scheduleTitle = signal<string>('Team Training');
 
-  private existingScheduleId = signal<number | null>(null);
+  private existingScheduleId = signal<string | null>(null);
 
   constructor() {
     this.load();
@@ -108,7 +106,7 @@ export class SeasonComponent {
     }
   }
 
-  async deletePlan(id: number, event: Event): Promise<void> {
+  async deletePlan(id: string, event: Event): Promise<void> {
     event.stopPropagation();
     if (!confirm('Delete this season plan?')) return;
     await this.service.delete(id);
@@ -179,13 +177,13 @@ export class SeasonComponent {
 
       if (this.scheduleSelectedDays().length > 0) {
         const newId = await this.scheduleService.add({
-          teamId: this.teamId,
+          team_id: this.teamId!,
           title: this.scheduleTitle().trim() || 'Team Training',
-          daysOfWeek: this.scheduleSelectedDays(),
-          startTime: this.scheduleStartTime().trim() || null,
-          durationMinutes: this.scheduleDuration(),
-          startDate: this.editingPlan.start_date!,
-          endDate: this.editingPlan.end_date!,
+          days_of_week: this.scheduleSelectedDays(),
+          start_time: this.scheduleStartTime().trim() || null,
+          duration_minutes: this.scheduleDuration(),
+          start_date: this.editingPlan.start_date!,
+          end_date: this.editingPlan.end_date!,
           active: true,
         });
         this.existingScheduleId.set(newId);
@@ -235,14 +233,14 @@ export class SeasonComponent {
 
     const allSchedules = await this.scheduleService.list(this.teamId);
     const match = allSchedules.find(
-      s => s.startDate === plan.start_date && s.endDate === plan.end_date,
+      s => s.start_date === plan.start_date && s.end_date === plan.end_date,
     );
 
     if (match) {
       this.existingScheduleId.set(match.id ?? null);
-      this.scheduleSelectedDays.set([...match.daysOfWeek]);
-      this.scheduleStartTime.set(match.startTime ?? '');
-      this.scheduleDuration.set(match.durationMinutes);
+      this.scheduleSelectedDays.set([...match.days_of_week]);
+      this.scheduleStartTime.set(match.start_time ?? '');
+      this.scheduleDuration.set(match.duration_minutes);
       if (match.title) this.scheduleTitle.set(match.title);
     }
   }

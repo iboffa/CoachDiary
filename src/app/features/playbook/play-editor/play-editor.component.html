@@ -127,7 +127,7 @@
 
       <div class="ai-coach-section">
         <app-ai-coach-modal
-          [teamId]="teamId ?? 0"
+          [teamId]="teamId ?? ''"
           [courtMode]="courtMode()"
           [getPlay]="getCurrentPlay"
           (playGenerated)="loadFromAiPlay($event)"

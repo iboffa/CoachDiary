@@ -10,7 +10,7 @@ function toIsoDate(d: Date): string {
   return `${y}-${m}-${day}`;
 }
 
-// Returns ISO weekday adjusted: Mon=0 … Sun=6  (matching RecurringSchedule.daysOfWeek)
+// Returns ISO weekday adjusted: Mon=0 … Sun=6  (matching RecurringSchedule.days_of_week)
 function adjustedDow(d: Date): number {
   const dow = d.getDay(); // 0=Sun,1=Mon…6=Sat
   return dow === 0 ? 6 : dow - 1;
@@ -20,25 +20,14 @@ function adjustedDow(d: Date): number {
 export class RecurringScheduleService {
   constructor(private db: DbService) {}
 
-  list(teamId: number): Promise<RecurringSchedule[]> {
-    return this.db.listRecurringSchedules(teamId);
-  }
-
-  add(s: Omit<RecurringSchedule, 'id'>): Promise<number> {
-    return this.db.addRecurringSchedule(s);
-  }
-
-  update(id: number, changes: Partial<RecurringSchedule>): Promise<void> {
-    return this.db.updateRecurringSchedule(id, changes);
-  }
-
-  delete(id: number): Promise<void> {
-    return this.db.deleteRecurringSchedule(id);
-  }
+  list(teamId: string): Promise<RecurringSchedule[]> { return this.db.listRecurringSchedules(teamId); }
+  add(s: Omit<RecurringSchedule, 'id'>): Promise<string> { return this.db.addRecurringSchedule(s); }
+  update(id: string, changes: Partial<RecurringSchedule>): Promise<void> { return this.db.updateRecurringSchedule(id, changes); }
+  delete(id: string): Promise<void> { return this.db.deleteRecurringSchedule(id); }
 
   expandToEvents(
     schedules: RecurringSchedule[],
-    teamId: number,
+    teamId: string,
     fromDate: Date,
     toDate: Date,
   ): CalendarEvent[] {
@@ -47,8 +36,8 @@ export class RecurringScheduleService {
     for (const schedule of schedules) {
       if (!schedule.active) continue;
 
-      const schedStart = new Date(schedule.startDate + 'T00:00:00');
-      const schedEnd = new Date(schedule.endDate + 'T00:00:00');
+      const schedStart = new Date(schedule.start_date + 'T00:00:00');
+      const schedEnd = new Date(schedule.end_date + 'T00:00:00');
 
       const windowStart = schedStart > fromDate ? schedStart : fromDate;
       const windowEnd = schedEnd < toDate ? schedEnd : toDate;
@@ -59,15 +48,15 @@ export class RecurringScheduleService {
       cursor.setHours(0, 0, 0, 0);
 
       while (cursor <= windowEnd) {
-        if (schedule.daysOfWeek.includes(adjustedDow(cursor))) {
+        if (schedule.days_of_week.includes(adjustedDow(cursor))) {
           const dateStr = toIsoDate(cursor);
           events.push({
             id: `recurring-${schedule.id}-${dateStr}`,
             date: new Date(cursor),
             title: schedule.title,
             type: 'training',
-            startTime: schedule.startTime,
-            durationMinutes: schedule.durationMinutes,
+            start_time: schedule.start_time,
+            duration_minutes: schedule.duration_minutes,
             routerLink: null,
             isRecurring: true,
             recurringScheduleId: schedule.id,

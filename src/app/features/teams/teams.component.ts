@@ -28,11 +28,11 @@ export class TeamsComponent {
     this.teams.set(await this.teamService.list());
   }
 
-  openTeam(id: number): void {
+  openTeam(id: string): void {
     this.router.navigate(['/teams', id, 'playbook']);
   }
 
-  openTraining(id: number): void {
+  openTraining(id: string): void {
     this.router.navigate(['/teams', id, 'training']);
   }
 
@@ -52,7 +52,7 @@ export class TeamsComponent {
     await this.load();
   }
 
-  async deleteTeam(id: number, event: MouseEvent): Promise<void> {
+  async deleteTeam(id: string, event: MouseEvent): Promise<void> {
     event.stopPropagation();
     if (!confirm('Delete this team? All associated data will remain but be unlinked.')) return;
     await this.teamService.delete(id);

@@ -117,10 +117,10 @@ export class PlayEditorComponent implements OnDestroy {
   private fabricCanvas!: Canvas;
 
   // ── Reactive signals ──────────────────────────────────────────
-  readonly playId    = signal<number | null>(null);
+  readonly playId    = signal<string | null>(null);
   readonly playName  = signal('New Play');
   readonly playDesc  = signal('');
-  readonly playCat   = signal<number | undefined>(undefined);
+  readonly playCat   = signal<string | undefined>(undefined);
   readonly courtMode = signal<CourtMode>('half');
   readonly categories = signal<PlayCategory[]>([]);
   newCategoryName = '';
@@ -201,15 +201,13 @@ export class PlayEditorComponent implements OnDestroy {
     courtMode: this.courtMode(),
   }) as unknown as PlayEditorState;
 
-  readonly teamId: number | null = PlayEditorComponent.parseRouteId(
+  readonly teamId: string | null = PlayEditorComponent.parseRouteId(
     this.route.snapshot.paramMap.get('teamId'));
-  private readonly oppId: number | null = PlayEditorComponent.parseRouteId(
+  private readonly oppId: string | null = PlayEditorComponent.parseRouteId(
     this.route.snapshot.paramMap.get('oppId'));
 
-  private static parseRouteId(raw: string | null): number | null {
-    if (!raw) return null;
-    const n = parseInt(raw, 10);
-    return isNaN(n) ? null : n;
+  private static parseRouteId(raw: string | null): string | null {
+    return raw ?? null;
   }
 
   private get listPath(): (string | number)[] {
@@ -222,7 +220,7 @@ export class PlayEditorComponent implements OnDestroy {
 
   constructor() {
     const id = this.route.snapshot.paramMap.get('id');
-    if (id && id !== 'new') this.playId.set(parseInt(id, 10));
+    if (id && id !== 'new') this.playId.set(id);
 
     if (this.teamId !== null) this.loadCategories();
 
@@ -1652,7 +1650,7 @@ export class PlayEditorComponent implements OnDestroy {
   }
 
   setCategoryId(value: string): void {
-    this.playCat.set(value ? parseInt(value, 10) : undefined);
+    this.playCat.set(value ? value : undefined);
   }
 
   back(): void { this.router.navigate(this.listPath); }

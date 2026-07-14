@@ -18,8 +18,8 @@ export class OpponentDetailComponent {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
 
-  readonly teamId = parseInt(this.route.snapshot.paramMap.get('teamId')!, 10);
-  readonly oppId  = parseInt(this.route.snapshot.paramMap.get('oppId')!, 10);
+  readonly teamId = this.route.snapshot.paramMap.get('teamId') ?? '';
+  readonly oppId  = this.route.snapshot.paramMap.get('oppId') ?? '';
 
   readonly opponent = signal<Opponent | null>(null);
   readonly notes    = signal<OpponentNote[]>([]);
@@ -63,7 +63,7 @@ export class OpponentDetailComponent {
     this.notes.set(await this.opponentService.listNotes(this.oppId));
   }
 
-  async deleteNote(id: number): Promise<void> {
+  async deleteNote(id: string): Promise<void> {
     await this.opponentService.deleteNote(id);
     this.notes.set(await this.opponentService.listNotes(this.oppId));
   }
@@ -84,7 +84,7 @@ export class OpponentDetailComponent {
     this.players.set(await this.opponentService.listPlayers(this.oppId));
   }
 
-  async deletePlayer(id: number): Promise<void> {
+  async deletePlayer(id: string): Promise<void> {
     if (!confirm('Remove this player?')) return;
     await this.opponentService.deletePlayer(id);
     this.players.set(await this.opponentService.listPlayers(this.oppId));

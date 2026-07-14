@@ -30,8 +30,8 @@
       <div class="form-group">
         <label>Start Time</label>
         <app-time-picker
-          [value]="game.startTime ?? ''"
-          (confirmed)="game.startTime = $event"
+          [value]="game.start_time ?? ''"
+          (confirmed)="game.start_time = $event"
           data-testid="game-start-time-input"
         />
       </div>
@@ -47,15 +47,15 @@
         <div class="toggle-group">
           <button
             class="toggle-btn"
-            [class.toggle-btn--active]="game.homeAway === 'home'"
-            (click)="game.homeAway = 'home'"
+            [class.toggle-btn--active]="game.home_away === 'home'"
+            (click)="game.home_away = 'home'"
             data-testid="home-btn">
             Home
           </button>
           <button
             class="toggle-btn"
-            [class.toggle-btn--active]="game.homeAway === 'away'"
-            (click)="game.homeAway = 'away'"
+            [class.toggle-btn--active]="game.home_away === 'away'"
+            (click)="game.home_away = 'away'"
             data-testid="away-btn">
             Away
           </button>
@@ -69,7 +69,7 @@
         <input
           type="number"
           min="0"
-          [(ngModel)]="game.scoreUs"
+          [(ngModel)]="game.score_us"
           placeholder="—"
           data-testid="score-us-input"/>
       </div>
@@ -78,7 +78,7 @@
         <input
           type="number"
           min="0"
-          [(ngModel)]="game.scoreThem"
+          [(ngModel)]="game.score_them"
           placeholder="—"
           data-testid="score-them-input"/>
       </div>

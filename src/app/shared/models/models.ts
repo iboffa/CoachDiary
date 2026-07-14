@@ -1,5 +1,5 @@
 export interface Team {
-  id?: number;
+  id?: string;
   name: string;
   description?: string;
   created_at?: string;
@@ -7,16 +7,16 @@ export interface Team {
 }
 
 export interface TeamNote {
-  id?: number;
-  team_id: number;
+  id?: string;
+  team_id: string;
   date: string;
   content: string;
   created_at?: string;
 }
 
 export interface Opponent {
-  id?: number;
-  team_id: number;
+  id?: string;
+  team_id: string;
   name: string;
   notes?: string;
   created_at?: string;
@@ -24,8 +24,8 @@ export interface Opponent {
 }
 
 export interface OpponentPlayer {
-  id?: number;
-  opponent_id: number;
+  id?: string;
+  opponent_id: string;
   name: string;
   number: number;
   position: 'PG' | 'SG' | 'SF' | 'PF' | 'C' | '';
@@ -33,8 +33,8 @@ export interface OpponentPlayer {
 }
 
 export interface OpponentNote {
-  id?: number;
-  opponent_id: number;
+  id?: string;
+  opponent_id: string;
   date: string;
   content: string;
   created_at?: string;
@@ -43,8 +43,8 @@ export interface OpponentNote {
 export type PlayerRole = 'star' | 'starter' | 'bench' | 'deep_bench';
 
 export interface Player {
-  id?: number;
-  team_id?: number;
+  id?: string;
+  team_id?: string;
   name: string;
   number: number;
   position: 'PG' | 'SG' | 'SF' | 'PF' | 'C' | '';
@@ -60,8 +60,8 @@ export interface Player {
 }
 
 export interface PlayerNote {
-  id?: number;
-  player_id: number;
+  id?: string;
+  player_id: string;
   date: string;
   category: 'general' | 'technical' | 'physical' | 'mental' | 'game';
   content: string;
@@ -69,23 +69,23 @@ export interface PlayerNote {
 }
 
 export interface PlayCategory {
-  id?: number;
+  id?: string;
   name: string;
-  team_id: number;
+  team_id: string;
 }
 
 export interface DrillCategory {
-  id?: number;
+  id?: string;
   name: string;
 }
 
 export interface Play {
-  id?: number;
-  team_id?: number;
-  opponent_id?: number;
+  id?: string;
+  team_id?: string;
+  opponent_id?: string;
   name: string;
   description?: string;
-  category_id?: number;
+  category_id?: string;
   canvas_state: string;
   thumbnail?: string | null;
   is_template?: boolean;
@@ -104,17 +104,17 @@ export interface Drill {
 }
 
 export interface SavedDrill {
-  id?: number;
+  id?: string;
   name: string;
   duration_minutes: number;
   description?: string;
-  category_id?: number;
+  category_id?: string;
   created_at?: string;
 }
 
 export interface TrainingSession {
-  id?: number;
-  team_id?: number;
+  id?: string;
+  team_id?: string;
   name: string;
   date?: string;
   start_time?: string;
@@ -134,7 +134,7 @@ export interface SeasonEvent {
   title: string;
   opponent?: string;
   location?: string;
-  training_session_id?: number;
+  training_session_id?: string;
   notes?: string;
 }
 
@@ -146,8 +146,8 @@ export interface SeasonGoal {
 }
 
 export interface SeasonPlan {
-  id?: number;
-  team_id?: number;
+  id?: string;
+  team_id?: string;
   name: string;
   season_year?: string;
   start_date?: string;
@@ -159,7 +159,8 @@ export interface SeasonPlan {
 }
 
 export interface GameNote {
-  id?: number;
+  id?: string;
+  team_id?: string;
   date: string;
   opponent?: string;
   score?: string;
@@ -169,48 +170,48 @@ export interface GameNote {
 }
 
 export interface Game {
-  id?: number;
-  teamId: number;
+  id?: string;
+  team_id: string;
   date: string;
-  startTime?: string | null;
+  start_time?: string | null;
   opponent: string;
-  homeAway: 'home' | 'away';
-  scoreUs: number | null;
-  scoreThem: number | null;
+  home_away: 'home' | 'away';
+  score_us: number | null;
+  score_them: number | null;
   notes: string;
 }
 
 export type CalendarCustomEventType = 'meeting' | 'video-session' | 'tournament' | 'other';
 
 export interface CalendarCustomEvent {
-  id?: number;
-  teamId: number;
+  id?: string;
+  team_id: string;
   title: string;
   date: string;           // "YYYY-MM-DD"
-  startTime: string | null;  // "HH:MM"
-  durationMinutes: number | null;
+  start_time: string | null;  // "HH:MM"
+  duration_minutes: number | null;
   type: CalendarCustomEventType;
   notes?: string;
 }
 
 export interface RecurringSchedule {
-  id?: number;
-  teamId: number;
+  id?: string;
+  team_id: string;
   title: string;
-  daysOfWeek: number[];   // 0=Mon … 6=Sun (ISO weekday - 1)
-  startTime: string | null;  // "HH:MM"
-  durationMinutes: number | null;
-  startDate: string;   // "YYYY-MM-DD"
-  endDate: string;     // "YYYY-MM-DD"
+  days_of_week: number[];   // 0=Mon … 6=Sun (ISO weekday - 1)
+  start_time: string | null;  // "HH:MM"
+  duration_minutes: number | null;
+  start_date: string;   // "YYYY-MM-DD"
+  end_date: string;     // "YYYY-MM-DD"
   active: boolean;
 }
 
 export interface Task {
-  id?: number;
-  teamId: number;
+  id?: string;
+  team_id: string;
   title: string;
-  dueDate?: string;      // "YYYY-MM-DD", optional
+  due_date?: string;      // "YYYY-MM-DD", optional
   done: boolean;
-  playerId?: number;     // optional — links the task to a specific player
-  createdAt: string;     // ISO datetime
+  player_id?: string;     // optional — links the task to a specific player
+  created_at: string;     // ISO datetime
 }

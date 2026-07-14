@@ -22,7 +22,7 @@ export class CalendarService {
     private tasksService: TasksService,
   ) {}
 
-  getEventsForTeam(teamId: number): Observable<CalendarEvent[]> {
+  getEventsForTeam(teamId: string): Observable<CalendarEvent[]> {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const windowFrom = new Date(today);
@@ -48,9 +48,9 @@ export class CalendarService {
             date: new Date(game.date),
             title: game.opponent,
             type: 'game',
-            startTime: game.startTime ?? null,
-            durationMinutes: 120,
-            routerLink: ['/teams', String(teamId), 'games', String(game.id)],
+            start_time: game.start_time ?? null,
+            duration_minutes: 120,
+            routerLink: ['/teams', teamId, 'games', String(game.id)],
           });
         }
 
@@ -61,9 +61,9 @@ export class CalendarService {
             date: new Date(session.date),
             title: session.name,
             type: 'training',
-            startTime: session.start_time ?? null,
-            durationMinutes: session.duration_minutes ?? null,
-            routerLink: ['/teams', String(teamId), 'training'],
+            start_time: session.start_time ?? null,
+            duration_minutes: session.duration_minutes ?? null,
+            routerLink: ['/teams', teamId, 'training'],
           });
         }
 
@@ -73,8 +73,8 @@ export class CalendarService {
             date: new Date(custom.date),
             title: custom.title,
             type: custom.type,
-            startTime: custom.startTime,
-            durationMinutes: custom.durationMinutes,
+            start_time: custom.start_time,
+            duration_minutes: custom.duration_minutes,
             routerLink: null,
             customEventId: custom.id,
           });
@@ -95,9 +95,9 @@ export class CalendarService {
               date: new Date(goal.deadline),
               title: goal.text,
               type: 'season-goal',
-              startTime: null,
-              durationMinutes: null,
-              routerLink: ['/teams', String(teamId), 'season'],
+              start_time: null,
+              duration_minutes: null,
+              routerLink: ['/teams', teamId, 'season'],
             });
           }
         }
@@ -108,43 +108,35 @@ export class CalendarService {
             date: new Date(note.date),
             title: note.content.slice(0, 60),
             type: 'journal',
-            startTime: null,
-            durationMinutes: null,
-            routerLink: ['/teams', String(teamId), 'notes'],
+            start_time: null,
+            duration_minutes: null,
+            routerLink: ['/teams', teamId, 'notes'],
           });
         }
 
-        // Build a set of real training session dates for deduplication
         const realTrainingDates = new Set<string>(
-          trainings
-            .filter(s => !!s.date)
-            .map(s => s.date as string),
+          trainings.filter(s => !!s.date).map(s => s.date as string),
         );
 
         const recurringEvents = this.recurringScheduleService.expandToEvents(
-          schedules,
-          teamId,
-          windowFrom,
-          windowTo,
+          schedules, teamId, windowFrom, windowTo,
         );
 
         for (const recurring of recurringEvents) {
-          if (recurring.recurringDate && realTrainingDates.has(recurring.recurringDate)) {
-            continue;
-          }
+          if (recurring.recurringDate && realTrainingDates.has(recurring.recurringDate)) continue;
           events.push(recurring);
         }
 
         for (const task of tasks) {
-          if (!task.dueDate) continue;
+          if (!task.due_date) continue;
           events.push({
             id: `task-${task.id}`,
-            date: new Date(task.dueDate),
+            date: new Date(task.due_date),
             title: task.title,
             type: 'task',
-            startTime: null,
-            durationMinutes: null,
-            routerLink: ['/teams', String(teamId), 'tasks'],
+            start_time: null,
+            duration_minutes: null,
+            routerLink: ['/teams', teamId, 'tasks'],
           });
         }
 

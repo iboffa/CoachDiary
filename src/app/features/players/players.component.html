@@ -114,9 +114,9 @@
                       <input type="checkbox" [checked]="task.done" (change)="togglePlayerTask(task)"/>
                     </label>
                     <span class="player-task-row__title">{{ task.title }}</span>
-                    @if (task.dueDate) {
-                      <span class="player-task-row__due" [class.player-task-row__due--overdue]="!task.done && task.dueDate < today">
-                        {{ task.dueDate | date:'MMM d' }}
+                    @if (task.due_date) {
+                      <span class="player-task-row__due" [class.player-task-row__due--overdue]="!task.done && task.due_date < today">
+                        {{ task.due_date | date:'MMM d' }}
                       </span>
                     }
                     <button class="btn btn--danger btn--xs" (click)="deletePlayerTask(task.id!)">✕</button>

@@ -16,16 +16,16 @@ export class GameDetailComponent {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
 
-  readonly teamId: number = (() => {
+  readonly teamId: string = (() => {
     const raw = this.route.snapshot.paramMap.get('teamId');
-    return raw ? parseInt(raw, 10) : 0;
+    return raw ?? '';
   })();
 
   private readonly gameIdRaw = this.route.snapshot.paramMap.get('gameId');
   readonly isNew = this.gameIdRaw === 'new' || this.gameIdRaw === null;
-  private readonly gameId: number | null = this.isNew
+  private readonly gameId: string | null = this.isNew
     ? null
-    : parseInt(this.gameIdRaw!, 10);
+    : this.gameIdRaw!;
 
   readonly saving = signal(false);
 
@@ -42,7 +42,7 @@ export class GameDetailComponent {
     }
   }
 
-  private async load(id: number): Promise<void> {
+  private async load(id: string): Promise<void> {
     const found = await this.service.getGame(id);
     if (found) {
       this.game = { ...found };
@@ -54,13 +54,13 @@ export class GameDetailComponent {
     this.saving.set(true);
     try {
       const payload: Omit<Game, 'id'> = {
-        teamId: this.teamId,
+        team_id: this.teamId,
         date: this.game.date ?? new Date().toISOString().split('T')[0],
-        startTime: this.game.startTime ?? null,
+        start_time: this.game.start_time ?? null,
         opponent: this.game.opponent.trim(),
-        homeAway: this.game.homeAway ?? 'home',
-        scoreUs: this.game.scoreUs ?? null,
-        scoreThem: this.game.scoreThem ?? null,
+        home_away: this.game.home_away ?? 'home',
+        score_us: this.game.score_us ?? null,
+        score_them: this.game.score_them ?? null,
         notes: this.game.notes ?? '',
       };
       if (this.isNew) {
@@ -87,11 +87,11 @@ export class GameDetailComponent {
   private defaultGame(): Partial<Game> {
     return {
       date: new Date().toISOString().split('T')[0],
-      startTime: null,
+      start_time: null,
       opponent: '',
-      homeAway: 'home',
-      scoreUs: null,
-      scoreThem: null,
+      home_away: 'home',
+      score_us: null,
+      score_them: null,
       notes: '',
     };
   }

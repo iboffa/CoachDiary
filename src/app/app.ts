@@ -20,8 +20,8 @@ export class App {
   private readonly opponentService = inject(OpponentService);
 
   readonly sidebarMode = signal<SidebarMode>('teams');
-  readonly currentTeamId = signal<number | null>(null);
-  readonly currentOppId  = signal<number | null>(null);
+  readonly currentTeamId = signal<string | null>(null);
+  readonly currentOppId  = signal<string | null>(null);
   readonly currentTeam   = signal<Team | null>(null);
   readonly currentOpponent = signal<Opponent | null>(null);
 
@@ -35,19 +35,19 @@ export class App {
   }
 
   private syncSidebar(url: string): void {
-    const teamMatch = url.match(/\/teams\/(\d+)/);
-    const oppMatch  = url.match(/\/opponents\/(\d+)/);
+    const teamMatch = url.match(/\/teams\/([^\/]+)/);
+    const oppMatch  = url.match(/\/opponents\/([^\/]+)/);
 
     if (oppMatch) {
-      const oppId  = parseInt(oppMatch[1], 10);
-      const teamId = teamMatch ? parseInt(teamMatch[1], 10) : null;
+      const oppId  = oppMatch[1];
+      const teamId = teamMatch ? teamMatch[1] : null;
       this.sidebarMode.set('opponent');
       this.currentOppId.set(oppId);
       this.currentTeamId.set(teamId);
       this.opponentService.get(oppId).then(o => this.currentOpponent.set(o ?? null));
       if (teamId) this.teamService.get(teamId).then(t => this.currentTeam.set(t ?? null));
     } else if (teamMatch) {
-      const teamId = parseInt(teamMatch[1], 10);
+      const teamId = teamMatch[1];
       this.sidebarMode.set('team');
       this.currentTeamId.set(teamId);
       this.currentOppId.set(null);

@@ -63,13 +63,13 @@
           </label>
           <span class="task-row__title">{{ task.title }}</span>
           <div class="task-row__badges">
-            @if (task.dueDate) {
-              <span class="badge badge--due" [class.badge--overdue]="!task.done && task.dueDate < today">
-                {{ task.dueDate | date:'MMM d' }}
+            @if (task.due_date) {
+              <span class="badge badge--due" [class.badge--overdue]="!task.done && task.due_date < today">
+                {{ task.due_date | date:'MMM d' }}
               </span>
             }
-            @if (task.playerId) {
-              <span class="badge badge--player">{{ playerName(task.playerId) }}</span>
+            @if (task.player_id) {
+              <span class="badge badge--player">{{ playerName(task.player_id) }}</span>
             }
           </div>
           <button

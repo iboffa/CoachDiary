@@ -6,27 +6,10 @@ import { Task } from '../../shared/models/models';
 export class TasksService {
   constructor(private db: DbService) {}
 
-  getTasksByTeam(teamId: number): Promise<Task[]> {
-    return this.db.listTasksByTeam(teamId);
-  }
-
-  getTasksByPlayer(teamId: number, playerId: number): Promise<Task[]> {
-    return this.db.listTasksByPlayer(teamId, playerId);
-  }
-
-  addTask(task: Omit<Task, 'id'>): Promise<number> {
-    return this.db.addTask(task);
-  }
-
-  updateTask(id: number, changes: Partial<Omit<Task, 'id'>>): Promise<void> {
-    return this.db.updateTask(id, changes);
-  }
-
-  deleteTask(id: number): Promise<void> {
-    return this.db.deleteTask(id);
-  }
-
-  toggleDone(id: number): Promise<void> {
-    return this.db.toggleTaskDone(id);
-  }
+  getTasksByTeam(teamId: string): Promise<Task[]> { return this.db.listTasksByTeam(teamId); }
+  getTasksByPlayer(teamId: string, playerId: string): Promise<Task[]> { return this.db.listTasksByPlayer(teamId, playerId); }
+  addTask(task: Omit<Task, 'id'>): Promise<string> { return this.db.addTask(task); }
+  updateTask(id: string, changes: Partial<Omit<Task, 'id'>>): Promise<void> { return this.db.updateTask(id, changes); }
+  deleteTask(id: string): Promise<void> { return this.db.deleteTask(id); }
+  toggleDone(id: string): Promise<void> { return this.db.toggleTaskDone(id); }
 }

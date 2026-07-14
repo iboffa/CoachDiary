@@ -48,9 +48,9 @@ export class CalendarComponent implements OnInit {
   private readonly calendarService = inject(CalendarService);
   private readonly customEventService = inject(CalendarCustomEventService);
 
-  readonly teamId: number = (() => {
+  readonly teamId: string = (() => {
     const raw = this.route.snapshot.paramMap.get('teamId');
-    return raw ? parseInt(raw, 10) : 0;
+    return raw ?? '';
   })();
 
   readonly year = signal<number>(new Date().getFullYear());
@@ -294,11 +294,11 @@ export class CalendarComponent implements OnInit {
 
     const iso = form.date.toISOString().split('T')[0];
     await this.customEventService.create({
-      teamId: this.teamId,
+      team_id: this.teamId,
       title: form.title.trim(),
       date: iso,
-      startTime: form.startTime.trim() || null,
-      durationMinutes: form.durationMinutes,
+      start_time: form.startTime.trim() || null,
+      duration_minutes: form.durationMinutes,
       type: form.type,
       notes: form.notes.trim() || undefined,
     });
@@ -309,7 +309,7 @@ export class CalendarComponent implements OnInit {
     this.loadEvents();
   }
 
-  async deleteCustomEvent(customEventId: number, event: MouseEvent): Promise<void> {
+  async deleteCustomEvent(customEventId: string, event: MouseEvent): Promise<void> {
     event.stopPropagation();
     event.preventDefault();
     await this.customEventService.delete(customEventId);
@@ -331,8 +331,8 @@ export class CalendarComponent implements OnInit {
 
   chipLabel(ev: CalendarEvent): string {
     const prefix = ev.isRecurring ? '↻ ' : '';
-    if (ev.startTime) {
-      return `${prefix}${ev.startTime} ${ev.title}`;
+    if (ev.start_time) {
+      return `${prefix}${ev.start_time} ${ev.title}`;
     }
     return `${prefix}${ev.title}`;
   }
@@ -368,8 +368,8 @@ export class CalendarComponent implements OnInit {
 
   timeDurationLabel(ev: CalendarEvent): string {
     const parts: string[] = [];
-    if (ev.startTime) parts.push(ev.startTime);
-    if (ev.durationMinutes) parts.push(`${ev.durationMinutes} min`);
+    if (ev.start_time) parts.push(ev.start_time);
+    if (ev.duration_minutes) parts.push(`${ev.duration_minutes} min`);
     return parts.join(' · ');
   }
 

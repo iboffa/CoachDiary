@@ -18,10 +18,8 @@ export class PlayListComponent {
   private readonly teamId = PlayListComponent.parseId(this.route.snapshot.paramMap.get('teamId'));
   private readonly oppId  = PlayListComponent.parseId(this.route.snapshot.paramMap.get('oppId'));
 
-  private static parseId(raw: string | null): number | null {
-    if (!raw) return null;
-    const n = parseInt(raw, 10);
-    return isNaN(n) ? null : n;
+  private static parseId(raw: string | null): string | null {
+    return raw ?? null;
   }
 
   private get filter() {
@@ -43,14 +41,14 @@ export class PlayListComponent {
   readonly plays = signal<PlaySummary[]>([]);
   readonly templates = signal<PlaySummary[]>([]);
   readonly categories = signal<PlayCategory[]>([]);
-  readonly collapsedFolders = signal<Set<number | null>>(new Set());
+  readonly collapsedFolders = signal<Set<string | null>>(new Set());
   readonly isEmpty = computed(() => this.plays().length === 0);
 
   readonly groupedPlays = computed(() => {
     const cats = this.categories();
     const plays = this.plays();
     const catMap = new Map(cats.map(c => [c.id!, c]));
-    const byCategory = new Map<number, PlaySummary[]>();
+    const byCategory = new Map<string, PlaySummary[]>();
     const uncategorized: PlaySummary[] = [];
 
     for (const play of plays) {
@@ -86,7 +84,7 @@ export class PlayListComponent {
     this.categories.set(categories);
   }
 
-  toggleFolder(categoryId: number | null): void {
+  toggleFolder(categoryId: string | null): void {
     this.collapsedFolders.update(s => {
       const next = new Set(s);
       if (next.has(categoryId)) next.delete(categoryId);
@@ -95,22 +93,22 @@ export class PlayListComponent {
     });
   }
 
-  isFolderCollapsed(categoryId: number | null): boolean {
+  isFolderCollapsed(categoryId: string | null): boolean {
     return this.collapsedFolders().has(categoryId);
   }
 
-  async deleteCategory(id: number, event: MouseEvent): Promise<void> {
+  async deleteCategory(id: string, event: MouseEvent): Promise<void> {
     event.stopPropagation();
     if (!confirm('Delete this category? Plays will become uncategorized.')) return;
     await this.playService.deleteCategory(id);
     await this.load();
   }
 
-  openEditor(id?: number): void {
+  openEditor(id?: string): void {
     this.router.navigate([...this.editorBasePath, id ?? 'new']);
   }
 
-  async duplicatePlay(id: number, event: MouseEvent): Promise<void> {
+  async duplicatePlay(id: string, event: MouseEvent): Promise<void> {
     event.stopPropagation();
     const play = await this.playService.get(id);
     if (!play) return;
@@ -119,7 +117,7 @@ export class PlayListComponent {
     this.router.navigate([...this.editorBasePath, newId]);
   }
 
-  async savePlayAsTemplate(id: number, event: MouseEvent): Promise<void> {
+  async savePlayAsTemplate(id: string, event: MouseEvent): Promise<void> {
     event.stopPropagation();
     const play = await this.playService.get(id);
     if (!play) return;
@@ -128,7 +126,7 @@ export class PlayListComponent {
     await this.load();
   }
 
-  async deletePlay(id: number, event: MouseEvent): Promise<void> {
+  async deletePlay(id: string, event: MouseEvent): Promise<void> {
     event.stopPropagation();
     if (confirm('Delete this play?')) {
       await this.playService.delete(id);
@@ -136,7 +134,7 @@ export class PlayListComponent {
     }
   }
 
-  async useTemplate(templateId: number, event: MouseEvent): Promise<void> {
+  async useTemplate(templateId: string, event: MouseEvent): Promise<void> {
     event.stopPropagation();
     const template = await this.playService.get(templateId);
     if (!template) return;
@@ -145,7 +143,7 @@ export class PlayListComponent {
     this.router.navigate([...this.editorBasePath, newId]);
   }
 
-  async deleteTemplate(id: number, event: MouseEvent): Promise<void> {
+  async deleteTemplate(id: string, event: MouseEvent): Promise<void> {
     event.stopPropagation();
     if (confirm('Delete this template?')) {
       await this.playService.delete(id);

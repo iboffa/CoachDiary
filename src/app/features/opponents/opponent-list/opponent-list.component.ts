@@ -15,7 +15,7 @@ export class OpponentListComponent {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
 
-  readonly teamId = parseInt(this.route.snapshot.paramMap.get('teamId')!, 10);
+  readonly teamId = this.route.snapshot.paramMap.get('teamId') ?? '';
   readonly opponents = signal<Opponent[]>([]);
   readonly showForm = signal(false);
   readonly isEmpty = computed(() => this.opponents().length === 0);
@@ -30,7 +30,7 @@ export class OpponentListComponent {
     this.opponents.set(await this.opponentService.list(this.teamId));
   }
 
-  openOpponent(id: number): void {
+  openOpponent(id: string): void {
     this.router.navigate(['/teams', this.teamId, 'opponents', id]);
   }
 
@@ -50,7 +50,7 @@ export class OpponentListComponent {
     await this.load();
   }
 
-  async deleteOpponent(id: number, event: MouseEvent): Promise<void> {
+  async deleteOpponent(id: string, event: MouseEvent): Promise<void> {
     event.stopPropagation();
     if (!confirm('Delete this opponent?')) return;
     await this.opponentService.delete(id);
