@@ -4,6 +4,7 @@ declare global {
   interface Window {
     electronAPI?: {
       invoke: (channel: string, ...args: unknown[]) => Promise<unknown>;
+      onAuthCallback: (callback: (url: string) => void) => void;
     };
   }
 }
@@ -17,5 +18,11 @@ export class ElectronService {
       return Promise.reject(new Error('Not running in Electron'));
     }
     return window.electronAPI!.invoke(channel, ...args) as Promise<T>;
+  }
+
+  onAuthCallback(callback: (url: string) => void): void {
+    if (this.isElectron) {
+      window.electronAPI!.onAuthCallback(callback);
+    }
   }
 }

@@ -15,6 +15,14 @@ export const routes: Routes = [
   // Teams main page
   { path: 'teams', component: TeamsComponent, canActivate: [authGuard] },
 
+  // Account settings
+  {
+    path: 'settings',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/settings/settings.component').then(m => m.SettingsComponent),
+  },
+
   // Team — playbook
   {
     path: 'teams/:teamId/playbook',

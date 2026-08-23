@@ -1,9 +1,11 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, HostListener, inject, signal } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { Router, NavigationEnd } from '@angular/router';
 import { filter } from 'rxjs/operators';
 import { TeamService } from './core/services/team.service';
 import { OpponentService } from './core/services/opponent.service';
+import { AuthService } from './core/services/auth.service';
 import { Team, Opponent } from './shared/models/models';
 
 type SidebarMode = 'teams' | 'team' | 'opponent';
@@ -18,12 +20,17 @@ export class App {
   private readonly router = inject(Router);
   private readonly teamService = inject(TeamService);
   private readonly opponentService = inject(OpponentService);
+  private readonly auth = inject(AuthService);
 
   readonly sidebarMode = signal<SidebarMode>('teams');
   readonly currentTeamId = signal<string | null>(null);
   readonly currentOppId  = signal<string | null>(null);
   readonly currentTeam   = signal<Team | null>(null);
   readonly currentOpponent = signal<Opponent | null>(null);
+
+  readonly session = toSignal(this.auth.session$, { initialValue: this.auth.session });
+  readonly userEmail = () => this.session()?.user.email ?? '';
+  readonly userMenuOpen = signal(false);
 
   constructor() {
     this.router.events
@@ -32,6 +39,26 @@ export class App {
 
     // Sync on first load
     this.syncSidebar(this.router.url);
+  }
+
+  @HostListener('document:click')
+  closeUserMenu(): void {
+    this.userMenuOpen.set(false);
+  }
+
+  toggleUserMenu(event: MouseEvent): void {
+    event.stopPropagation();
+    this.userMenuOpen.update(open => !open);
+  }
+
+  openSettings(): void {
+    this.userMenuOpen.set(false);
+    this.router.navigate(['/settings']);
+  }
+
+  async logout(): Promise<void> {
+    this.userMenuOpen.set(false);
+    await this.auth.signOut();
   }
 
   private syncSidebar(url: string): void {
