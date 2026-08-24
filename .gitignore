@@ -41,6 +41,9 @@ testem.log
 __screenshots__/
 .claude/
 
+# Supabase CLI local state
+supabase/.temp/
+
 # System files
 .DS_Store
 Thumbs.db

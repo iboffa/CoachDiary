@@ -16,10 +16,13 @@ CREATE TABLE IF NOT EXISTS profiles (
 );
 
 -- Auto-create a profile row whenever a new user signs up
+-- SET search_path is required: supabase_auth_admin (which performs the
+-- actual auth.users insert during sign-up) runs with search_path=auth only,
+-- so an unqualified "profiles" reference would fail to resolve.
 CREATE OR REPLACE FUNCTION handle_new_user()
-RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER AS $$
+RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
 BEGIN
-  INSERT INTO profiles (id, display_name, avatar_url)
+  INSERT INTO public.profiles (id, display_name, avatar_url)
   VALUES (
     NEW.id,
     COALESCE(NEW.raw_user_meta_data->>'full_name', NEW.email),
@@ -67,14 +70,14 @@ CREATE TABLE IF NOT EXISTS team_members (
 -- ---------------------------------------------------------------------------
 
 CREATE OR REPLACE FUNCTION is_team_member(p_team_id uuid)
-RETURNS boolean LANGUAGE sql SECURITY DEFINER AS $$
+RETURNS boolean LANGUAGE sql SECURITY DEFINER SET search_path = public AS $$
   SELECT EXISTS (
-    SELECT 1 FROM teams
+    SELECT 1 FROM public.teams
     WHERE id = p_team_id
       AND (
         owner_id = auth.uid()
         OR EXISTS (
-          SELECT 1 FROM team_members
+          SELECT 1 FROM public.team_members
           WHERE team_members.team_id = p_team_id
             AND team_members.user_id = auth.uid()
         )
@@ -360,8 +363,18 @@ CREATE POLICY "profiles: own row" ON profiles
 
 -- ── teams ─────────────────────────────────────────────────────────────────────
 
+-- owner_id checked inline (not via is_team_member) so INSERT ... RETURNING
+-- (every supabase-js .insert().select()) doesn't need a self-referencing
+-- subquery back into teams to see the row it just inserted.
 CREATE POLICY "teams: member can select" ON teams
-  FOR SELECT USING (is_team_member(id));
+  FOR SELECT USING (
+    owner_id = auth.uid()
+    OR EXISTS (
+      SELECT 1 FROM team_members
+      WHERE team_members.team_id = teams.id
+        AND team_members.user_id = auth.uid()
+    )
+  );
 
 CREATE POLICY "teams: owner can insert" ON teams
   FOR INSERT WITH CHECK (owner_id = auth.uid());

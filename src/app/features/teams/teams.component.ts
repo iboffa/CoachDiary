@@ -17,6 +17,7 @@ export class TeamsComponent {
   readonly teams = signal<Team[]>([]);
   readonly showForm = signal(false);
   readonly isEmpty = computed(() => this.teams().length === 0);
+  readonly formError = signal<string | null>(null);
 
   editingTeam: Partial<Team> = {};
 
@@ -38,6 +39,7 @@ export class TeamsComponent {
 
   openNewForm(): void {
     this.editingTeam = {};
+    this.formError.set(null);
     this.showForm.set(true);
   }
 
@@ -47,9 +49,15 @@ export class TeamsComponent {
 
   async saveTeam(): Promise<void> {
     if (!this.editingTeam.name?.trim()) return;
-    await this.teamService.save(this.editingTeam as Team);
-    this.showForm.set(false);
-    await this.load();
+    this.formError.set(null);
+    try {
+      await this.teamService.save(this.editingTeam as Team);
+      this.showForm.set(false);
+      await this.load();
+    } catch (err) {
+      console.error('[Teams] Failed to save team:', err);
+      this.formError.set(err instanceof Error ? err.message : 'Could not save the team. Please try again.');
+    }
   }
 
   async deleteTeam(id: string, event: MouseEvent): Promise<void> {

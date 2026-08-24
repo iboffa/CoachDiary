@@ -7,5 +7,6 @@ export class SupabaseService {
   readonly client: SupabaseClient = createClient(
     environment.supabaseUrl,
     environment.supabaseAnonKey,
+    { auth: { flowType: 'pkce' } },
   );
 }

@@ -1,4 +1,4 @@
-import { Component, HostListener, inject, signal } from '@angular/core';
+import { Component, HostListener, computed, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { Router, NavigationEnd } from '@angular/router';
@@ -32,13 +32,30 @@ export class App {
   readonly userEmail = () => this.session()?.user.email ?? '';
   readonly userMenuOpen = signal(false);
 
+  readonly currentUrl = signal(this.router.url);
+  readonly isLoginRoute = computed(() => this.currentUrl().startsWith('/login'));
+  readonly sidebarOpen = signal(false);
+
   constructor() {
     this.router.events
       .pipe(filter(e => e instanceof NavigationEnd))
-      .subscribe(() => this.syncSidebar(this.router.url));
+      .subscribe(() => {
+        this.currentUrl.set(this.router.url);
+        this.syncSidebar(this.router.url);
+        this.sidebarOpen.set(false);
+      });
 
     // Sync on first load
     this.syncSidebar(this.router.url);
+  }
+
+  toggleSidebar(event: MouseEvent): void {
+    event.stopPropagation();
+    this.sidebarOpen.update(open => !open);
+  }
+
+  closeSidebar(): void {
+    this.sidebarOpen.set(false);
   }
 
   @HostListener('document:click')

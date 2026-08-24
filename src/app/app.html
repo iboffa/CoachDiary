@@ -1,5 +1,10 @@
 <div class="app-shell">
-  <nav class="sidebar">
+  @if (sidebarOpen()) {
+    <div class="sidebar-backdrop" (click)="closeSidebar()"></div>
+  }
+
+  @if (!isLoginRoute()) {
+  <nav class="sidebar" [class.sidebar--open]="sidebarOpen()">
     <div class="sidebar__brand">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
         <circle cx="12" cy="12" r="10"/>
@@ -174,8 +179,17 @@
       </div>
     }
   </nav>
+  }
 
   <main class="main-content">
+    @if (!isLoginRoute()) {
+      <div class="mobile-topbar">
+        <button class="mobile-topbar__menu" (click)="toggleSidebar($event)" aria-label="Open menu">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3.75 6.75h16.5M3.75 12h16.5M3.75 17.25h16.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <span class="mobile-topbar__title">CoachDiary</span>
+      </div>
+    }
     <router-outlet/>
   </main>
 </div>
