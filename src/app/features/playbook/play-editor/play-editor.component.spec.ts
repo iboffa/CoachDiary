@@ -3,6 +3,13 @@ import { provideRouter, ActivatedRoute, Router } from '@angular/router';
 import { PlayEditorComponent } from './play-editor.component';
 import { COURT_OUT_OF_BOUNDS_PADDING, courtCanvasSize } from './court-painter';
 import { PlayService } from '../../../core/services/play.service';
+import { DbService } from '../../../core/services/db.service';
+
+// Each test constructs a real fabric.js canvas, which is CPU-heavy under
+// jsdom; under load (e.g. the full suite, or a slower CI runner) some of
+// these come close to the default 5s/30s timeout even though they aren't
+// hanging — they're just doing real canvas work.
+vi.setConfig({ testTimeout: 60000 });
 
 describe('PlayEditorComponent - Pick and Roll & Pass/Shoot Test', () => {
   let playServiceMock: any;
@@ -12,6 +19,7 @@ describe('PlayEditorComponent - Pick and Roll & Pass/Shoot Test', () => {
     playServiceMock = {
       get: vi.fn().mockResolvedValue(undefined),
       save: vi.fn().mockResolvedValue(123),
+      listCategories: vi.fn().mockResolvedValue([]),
     };
 
     activatedRouteMock = {
@@ -28,6 +36,10 @@ describe('PlayEditorComponent - Pick and Roll & Pass/Shoot Test', () => {
         provideRouter([]),
         { provide: PlayService, useValue: playServiceMock },
         { provide: ActivatedRoute, useValue: activatedRouteMock },
+        // PlayEditorComponent always renders <app-ai-coach-modal>, which injects
+        // the real DbService (→ AuthService → SupabaseService) unless overridden
+        // here — that would otherwise create a live GoTrueClient per test.
+        { provide: DbService, useValue: { listPlayers: vi.fn().mockResolvedValue([]) } },
       ],
     }).compileComponents();
   });
@@ -91,10 +103,16 @@ describe('PlayEditorComponent - Pick and Roll & Pass/Shoot Test', () => {
     expect(pgGroupSpy).toHaveBeenCalled();
     expect(centerGroupSpy).toHaveBeenCalled();
 
+    // Use fake timers so the internal 300 ms PRE_DELAY setTimeout in animatePhase
+    // is flushed while the component is still alive, preventing a stale-timer
+    // crash when TestBed destroys the component before the real timer fires.
+    vi.useFakeTimers();
     const previewPromise = component.previewPlay();
     expect(component.animState()).toBe('playing');
 
     component.stopAnimation();
+    vi.runAllTimers(); // flush the 300 ms pre-delay timer (canvas still alive)
+    vi.useRealTimers();
     await previewPromise;
 
     expect(component.animState()).toBe('idle');
@@ -345,12 +363,16 @@ describe('PlayEditorComponent - Pick and Roll & Pass/Shoot Test', () => {
     expect(component.ballCarrierId()).toBeNull();
     expect((component as any).ballIndicator).toBeNull();
 
+    // Use fake timers to flush the 300 ms PRE_DELAY timer before the canvas is disposed.
+    vi.useFakeTimers();
     const previewPromise = component.previewPlay();
 
     expect((component as any).ballIndicator).toBeTruthy();
     expect((component as any).ballIndicator.visible).toBe(true);
 
     component.stopAnimation();
+    vi.runAllTimers();
+    vi.useRealTimers();
     await previewPromise;
   });
 
@@ -862,9 +884,9 @@ describe('PlayEditorComponent — category management', () => {
   beforeEach(async () => {
     service = {
       get:            vi.fn().mockResolvedValue(undefined),
-      save:           vi.fn().mockResolvedValue(123),
+      save:           vi.fn().mockResolvedValue('123'),
       listCategories: vi.fn().mockResolvedValue([]),
-      saveCategory:   vi.fn().mockResolvedValue(99),
+      saveCategory:   vi.fn().mockResolvedValue('99'),
     };
 
     await TestBed.configureTestingModule({
@@ -880,6 +902,7 @@ describe('PlayEditorComponent — category management', () => {
             },
           },
         },
+        { provide: DbService, useValue: { listPlayers: vi.fn().mockResolvedValue([]) } },
       ],
     }).compileComponents();
 
@@ -891,9 +914,9 @@ describe('PlayEditorComponent — category management', () => {
 
   // ── setCategoryId ──────────────────────────────────────────────
 
-  it('setCategoryId parses a numeric string into the signal', () => {
+  it('setCategoryId stores the string value in the signal', () => {
     component.setCategoryId('7');
-    expect(component.playCat()).toBe(7);
+    expect(component.playCat()).toBe('7');
   });
 
   it('setCategoryId sets undefined for an empty string', () => {
@@ -905,27 +928,27 @@ describe('PlayEditorComponent — category management', () => {
   // ── createCategory ─────────────────────────────────────────────
 
   it('createCategory saves the category, clears the input, reloads, and selects the new id', async () => {
-    const newCat = { id: 99, name: 'Fast Break', team_id: 42 };
-    service.saveCategory.mockResolvedValue(99);
+    const newCat = { id: '99', name: 'Fast Break', team_id: '42' };
+    service.saveCategory.mockResolvedValue('99');
     service.listCategories.mockResolvedValue([newCat]);
 
     component.newCategoryName = 'Fast Break';
     await component.createCategory();
 
-    expect(service.saveCategory).toHaveBeenCalledWith({ name: 'Fast Break', team_id: 42 });
+    expect(service.saveCategory).toHaveBeenCalledWith({ name: 'Fast Break', team_id: '42' });
     expect(component.newCategoryName).toBe('');
     expect(component.categories()).toEqual([newCat]);
-    expect(component.playCat()).toBe(99);
+    expect(component.playCat()).toBe('99');
   });
 
   it('createCategory trims the input before saving', async () => {
-    service.saveCategory.mockResolvedValue(99);
+    service.saveCategory.mockResolvedValue('99');
     service.listCategories.mockResolvedValue([]);
 
     component.newCategoryName = '  Zone Press  ';
     await component.createCategory();
 
-    expect(service.saveCategory).toHaveBeenCalledWith({ name: 'Zone Press', team_id: 42 });
+    expect(service.saveCategory).toHaveBeenCalledWith({ name: 'Zone Press', team_id: '42' });
   });
 
   it('createCategory is a no-op when the input is blank', async () => {
@@ -939,16 +962,16 @@ describe('PlayEditorComponent — category management', () => {
   it('save() auto-creates a pending category before building the payload', async () => {
     vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
 
-    const newCat = { id: 99, name: 'Man Offense', team_id: 42 };
-    service.saveCategory.mockResolvedValue(99);
+    const newCat = { id: '99', name: 'Man Offense', team_id: '42' };
+    service.saveCategory.mockResolvedValue('99');
     service.listCategories.mockResolvedValue([newCat]);
 
     component.newCategoryName = 'Man Offense';
     await component.save();
 
-    expect(service.saveCategory).toHaveBeenCalledWith({ name: 'Man Offense', team_id: 42 });
+    expect(service.saveCategory).toHaveBeenCalledWith({ name: 'Man Offense', team_id: '42' });
     const savedPlay = service.save.mock.calls.at(-1)[0];
-    expect(savedPlay.category_id).toBe(99);
+    expect(savedPlay.category_id).toBe('99');
   });
 
   it('save() does not call saveCategory when newCategoryName is empty', async () => {

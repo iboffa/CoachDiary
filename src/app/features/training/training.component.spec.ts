@@ -23,12 +23,12 @@ describe('TrainingComponent', () => {
       list:                vi.fn().mockResolvedValue([]),
       listTemplates:       vi.fn().mockResolvedValue([]),
       listSavedDrills:     vi.fn().mockResolvedValue([]),
-      save:                vi.fn().mockResolvedValue(1),
+      save:                vi.fn().mockResolvedValue('1'),
       delete:              vi.fn().mockResolvedValue(undefined),
-      saveSavedDrill:      vi.fn().mockResolvedValue(1),
+      saveSavedDrill:      vi.fn().mockResolvedValue('1'),
       deleteSavedDrill:    vi.fn().mockResolvedValue(undefined),
       listDrillCategories: vi.fn().mockResolvedValue([]),
-      saveDrillCategory:   vi.fn().mockResolvedValue(1),
+      saveDrillCategory:   vi.fn().mockResolvedValue('1'),
       deleteDrillCategory: vi.fn().mockResolvedValue(undefined),
     };
 
@@ -235,7 +235,7 @@ describe('TrainingComponent', () => {
   describe('isDrillSaved', () => {
     beforeEach(() => {
       component.savedDrills.set([
-        { id: 1, name: 'Shooting Drill', duration_minutes: 20 },
+        { id: '1', name: 'Shooting Drill', duration_minutes: 20 },
       ]);
     });
 
@@ -268,7 +268,7 @@ describe('TrainingComponent', () => {
       service.list.mockResolvedValue([]);
       service.listTemplates.mockResolvedValue([]);
       const session: TrainingSession = {
-        id: 5, team_id: 1, name: 'Morning', drills: '[]',
+        id: '5', team_id: '1', name: 'Morning', drills: '[]',
       };
 
       await component.saveAsTemplate(session, new Event('click'));
@@ -285,11 +285,11 @@ describe('TrainingComponent', () => {
   describe('useTemplate', () => {
     it('saves a copy without is_template and with today\'s date', async () => {
       const today = new Date().toISOString().split('T')[0];
-      service.list.mockResolvedValue([{ id: 1, name: 'Morning Copy', drills: '[]', is_template: false, date: today }]);
+      service.list.mockResolvedValue([{ id: '1', name: 'Morning Copy', drills: '[]', is_template: false, date: today }]);
       service.listTemplates.mockResolvedValue([]);
 
       const template: TrainingSession = {
-        id: 99, team_id: 1, name: 'Morning', drills: '[]', is_template: true,
+        id: '99', team_id: '1', name: 'Morning', drills: '[]', is_template: true,
       };
 
       await component.useTemplate(template, new Event('click'));
@@ -319,38 +319,38 @@ describe('TrainingComponent', () => {
   // ── groupedSavedDrills ─────────────────────────────────────────
 
   describe('groupedSavedDrills', () => {
-    const CAT_X: DrillCategory = { id: 10, name: 'Defence' };
-    const CAT_Y: DrillCategory = { id: 20, name: 'Offence' };
+    const CAT_X: DrillCategory = { id: '10', name: 'Defence' };
+    const CAT_Y: DrillCategory = { id: '20', name: 'Offence' };
 
-    function drill(id: number, category_id?: number): SavedDrill {
+    function drill(id: string, category_id?: string): SavedDrill {
       return { id, name: `Drill ${id}`, duration_minutes: 10, category_id };
     }
 
     it('groups drills under their matching category', () => {
       component.drillCategories.set([CAT_X, CAT_Y]);
-      component.savedDrills.set([drill(1, 10), drill(2, 20)]);
+      component.savedDrills.set([drill('1', '10'), drill('2', '20')]);
 
       const groups = component.groupedSavedDrills();
       expect(groups).toHaveLength(2);
-      expect(groups[0].category?.id).toBe(10);
-      expect(groups[0].drills.map(d => d.id)).toEqual([1]);
-      expect(groups[1].category?.id).toBe(20);
-      expect(groups[1].drills.map(d => d.id)).toEqual([2]);
+      expect(groups[0].category?.id).toBe('10');
+      expect(groups[0].drills.map(d => d.id)).toEqual(['1']);
+      expect(groups[1].category?.id).toBe('20');
+      expect(groups[1].drills.map(d => d.id)).toEqual(['2']);
     });
 
     it('puts drills without category_id into the uncategorized group', () => {
       component.drillCategories.set([CAT_X]);
-      component.savedDrills.set([drill(1)]);
+      component.savedDrills.set([drill('1')]);
 
       const groups = component.groupedSavedDrills();
       expect(groups).toHaveLength(1);
       expect(groups[0].category).toBeNull();
-      expect(groups[0].drills[0].id).toBe(1);
+      expect(groups[0].drills[0].id).toBe('1');
     });
 
     it('treats an unknown category_id as uncategorized', () => {
       component.drillCategories.set([CAT_X]);
-      component.savedDrills.set([drill(1, 999)]);
+      component.savedDrills.set([drill('1', '999')]);
 
       const groups = component.groupedSavedDrills();
       expect(groups).toHaveLength(1);
@@ -359,19 +359,19 @@ describe('TrainingComponent', () => {
 
     it('omits categories that have no matching drills', () => {
       component.drillCategories.set([CAT_X, CAT_Y]);
-      component.savedDrills.set([drill(1, 10)]);
+      component.savedDrills.set([drill('1', '10')]);
 
       const ids = component.groupedSavedDrills().map(g => g.category?.id);
-      expect(ids).toEqual([10]);
+      expect(ids).toEqual(['10']);
     });
 
     it('appends the uncategorized group after all named category groups', () => {
       component.drillCategories.set([CAT_X]);
-      component.savedDrills.set([drill(1, 10), drill(2)]);
+      component.savedDrills.set([drill('1', '10'), drill('2')]);
 
       const groups = component.groupedSavedDrills();
       expect(groups).toHaveLength(2);
-      expect(groups[0].category?.id).toBe(10);
+      expect(groups[0].category?.id).toBe('10');
       expect(groups[1].category).toBeNull();
     });
 
@@ -386,8 +386,8 @@ describe('TrainingComponent', () => {
 
   describe('createDrillCategory', () => {
     it('saves the category, clears the input, and reloads', async () => {
-      const newCat: DrillCategory = { id: 5, name: 'Shooting' };
-      service.saveDrillCategory.mockResolvedValue(5);
+      const newCat: DrillCategory = { id: '5', name: 'Shooting' };
+      service.saveDrillCategory.mockResolvedValue('5');
       service.listDrillCategories.mockResolvedValue([newCat]);
 
       component.newDrillCategoryName = 'Shooting';
@@ -399,7 +399,7 @@ describe('TrainingComponent', () => {
     });
 
     it('trims the name before saving', async () => {
-      service.saveDrillCategory.mockResolvedValue(1);
+      service.saveDrillCategory.mockResolvedValue('1');
       service.listDrillCategories.mockResolvedValue([]);
 
       component.newDrillCategoryName = '  Passing  ';
@@ -422,10 +422,10 @@ describe('TrainingComponent', () => {
       vi.spyOn(window, 'confirm').mockReturnValue(true);
       const event = { stopPropagation: vi.fn() } as unknown as Event;
 
-      await component.deleteDrillCategory(7, event);
+      await component.deleteDrillCategory('7', event);
 
       expect(event.stopPropagation).toHaveBeenCalled();
-      expect(service.deleteDrillCategory).toHaveBeenCalledWith(7);
+      expect(service.deleteDrillCategory).toHaveBeenCalledWith('7');
       expect(service.listDrillCategories).toHaveBeenCalled();
       expect(service.listSavedDrills).toHaveBeenCalled();
     });
@@ -434,7 +434,7 @@ describe('TrainingComponent', () => {
       vi.spyOn(window, 'confirm').mockReturnValue(false);
       const event = { stopPropagation: vi.fn() } as unknown as Event;
 
-      await component.deleteDrillCategory(7, event);
+      await component.deleteDrillCategory('7', event);
 
       expect(service.deleteDrillCategory).not.toHaveBeenCalled();
     });
@@ -444,15 +444,15 @@ describe('TrainingComponent', () => {
 
   describe('toggleDrillFolder / isDrillFolderCollapsed', () => {
     it('collapses a folder on the first toggle', () => {
-      expect(component.isDrillFolderCollapsed(10)).toBe(false);
-      component.toggleDrillFolder(10);
-      expect(component.isDrillFolderCollapsed(10)).toBe(true);
+      expect(component.isDrillFolderCollapsed('10')).toBe(false);
+      component.toggleDrillFolder('10');
+      expect(component.isDrillFolderCollapsed('10')).toBe(true);
     });
 
     it('expands a collapsed folder on the second toggle', () => {
-      component.toggleDrillFolder(10);
-      component.toggleDrillFolder(10);
-      expect(component.isDrillFolderCollapsed(10)).toBe(false);
+      component.toggleDrillFolder('10');
+      component.toggleDrillFolder('10');
+      expect(component.isDrillFolderCollapsed('10')).toBe(false);
     });
 
     it('handles the null (uncategorized) folder key', () => {
@@ -463,9 +463,9 @@ describe('TrainingComponent', () => {
     });
 
     it('collapses each folder independently', () => {
-      component.toggleDrillFolder(10);
-      expect(component.isDrillFolderCollapsed(10)).toBe(true);
-      expect(component.isDrillFolderCollapsed(20)).toBe(false);
+      component.toggleDrillFolder('10');
+      expect(component.isDrillFolderCollapsed('10')).toBe(true);
+      expect(component.isDrillFolderCollapsed('20')).toBe(false);
     });
   });
 
@@ -473,18 +473,18 @@ describe('TrainingComponent', () => {
 
   describe('setDrillCategory', () => {
     it('calls saveSavedDrill with the new category_id and reloads the library', async () => {
-      const drill: SavedDrill = { id: 3, name: 'Lay-ups', duration_minutes: 15 };
-      service.listSavedDrills.mockResolvedValue([{ ...drill, category_id: 10 }]);
+      const drill: SavedDrill = { id: '3', name: 'Lay-ups', duration_minutes: 15 };
+      service.listSavedDrills.mockResolvedValue([{ ...drill, category_id: '10' }]);
 
-      await component.setDrillCategory(drill, 10);
+      await component.setDrillCategory(drill, '10');
 
-      expect(service.saveSavedDrill).toHaveBeenCalledWith({ ...drill, category_id: 10 });
-      expect(component.savedDrills()[0].category_id).toBe(10);
+      expect(service.saveSavedDrill).toHaveBeenCalledWith({ ...drill, category_id: '10' });
+      expect(component.savedDrills()[0].category_id).toBe('10');
     });
 
     it('passes undefined to remove a category from a drill', async () => {
-      const drill: SavedDrill = { id: 3, name: 'Lay-ups', duration_minutes: 15, category_id: 10 };
-      service.listSavedDrills.mockResolvedValue([{ id: 3, name: 'Lay-ups', duration_minutes: 15 }]);
+      const drill: SavedDrill = { id: '3', name: 'Lay-ups', duration_minutes: 15, category_id: '10' };
+      service.listSavedDrills.mockResolvedValue([{ id: '3', name: 'Lay-ups', duration_minutes: 15 }]);
 
       await component.setDrillCategory(drill, undefined);
 

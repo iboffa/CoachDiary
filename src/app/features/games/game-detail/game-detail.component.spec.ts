@@ -5,14 +5,14 @@ import { GameService } from '../../../core/services/game.service';
 import { Game } from '../../../shared/models/models';
 
 const EXISTING_GAME: Game = {
-  id: 7,
-  teamId: 1,
+  id: '7',
+  team_id: '1',
   date: '2026-05-10',
-  startTime: '18:00',
+  start_time: '18:00',
   opponent: 'Bulls U18',
-  homeAway: 'home',
-  scoreUs: 78,
-  scoreThem: 65,
+  home_away: 'home',
+  score_us: 78,
+  score_them: 65,
   notes: 'Great game',
 };
 
@@ -50,13 +50,17 @@ async function createComponent(
 
   const fixture = TestBed.createComponent(GameDetailComponent);
   const component = fixture.componentInstance;
+  // Prevent NG04002 errors from unmatched routes — tests that check navigation
+  // should spy on router.navigate themselves after calling createComponent.
+  const router = TestBed.inject(Router);
+  vi.spyOn(router, 'navigate').mockResolvedValue(true);
   await fixture.whenStable();
   return { fixture, component, service };
 }
 
 const defaultService = {
   getGame:    vi.fn().mockResolvedValue(undefined),
-  addGame:    vi.fn().mockResolvedValue(1),
+  addGame:    vi.fn().mockResolvedValue('1'),
   updateGame: vi.fn().mockResolvedValue(undefined),
   deleteGame: vi.fn().mockResolvedValue(undefined),
 };
@@ -65,7 +69,7 @@ describe('GameDetailComponent', () => {
   beforeEach(() => {
     // Reset all mocks between tests
     defaultService.getGame    = vi.fn().mockResolvedValue(undefined);
-    defaultService.addGame    = vi.fn().mockResolvedValue(1);
+    defaultService.addGame    = vi.fn().mockResolvedValue('1');
     defaultService.updateGame = vi.fn().mockResolvedValue(undefined);
     defaultService.deleteGame = vi.fn().mockResolvedValue(undefined);
     TestBed.resetTestingModule();
@@ -90,15 +94,15 @@ describe('GameDetailComponent', () => {
       expect(component.game.opponent).toBe('');
     });
 
-    it('initialises game.homeAway as "home"', async () => {
+    it('initialises game.home_away as "home"', async () => {
       const { component } = await createComponent({ teamId: '1', gameId: 'new' });
-      expect(component.game.homeAway).toBe('home');
+      expect(component.game.home_away).toBe('home');
     });
 
-    it('initialises scoreUs and scoreThem as null', async () => {
+    it('initialises score_us and score_them as null', async () => {
       const { component } = await createComponent({ teamId: '1', gameId: 'new' });
-      expect(component.game.scoreUs).toBeNull();
-      expect(component.game.scoreThem).toBeNull();
+      expect(component.game.score_us).toBeNull();
+      expect(component.game.score_them).toBeNull();
     });
 
     it('initialises date to today in ISO format', async () => {
@@ -116,33 +120,33 @@ describe('GameDetailComponent', () => {
       expect(component.game.date).toBe('2026-09-14');
     });
 
-    it('initialises startTime as null', async () => {
+    it('initialises start_time as null', async () => {
       const { component } = await createComponent({ teamId: '1', gameId: 'new' });
-      expect(component.game.startTime).toBeNull();
+      expect(component.game.start_time).toBeNull();
     });
   });
 
   // ── existing game mode ──────────────────────────────────────────
 
-  describe('when gameId param is a numeric id', () => {
+  describe('when gameId param is a string id', () => {
     it('sets isNew to false', async () => {
       const getGame = vi.fn().mockResolvedValue(EXISTING_GAME);
       const { component } = await createComponent({ teamId: '1', gameId: '7' }, { getGame });
       expect(component.isNew).toBe(false);
     });
 
-    it('calls getGame with the parsed numeric id', async () => {
+    it('calls getGame with the string id from the route', async () => {
       const getGame = vi.fn().mockResolvedValue(EXISTING_GAME);
       await createComponent({ teamId: '1', gameId: '7' }, { getGame });
-      expect(getGame).toHaveBeenCalledWith(7);
+      expect(getGame).toHaveBeenCalledWith('7');
     });
 
     it('populates game fields from the loaded record', async () => {
       const getGame = vi.fn().mockResolvedValue(EXISTING_GAME);
       const { component } = await createComponent({ teamId: '1', gameId: '7' }, { getGame });
       expect(component.game.opponent).toBe('Bulls U18');
-      expect(component.game.scoreUs).toBe(78);
-      expect(component.game.scoreThem).toBe(65);
+      expect(component.game.score_us).toBe(78);
+      expect(component.game.score_them).toBe(65);
       expect(component.game.notes).toBe('Great game');
     });
 
@@ -157,32 +161,32 @@ describe('GameDetailComponent', () => {
 
   describe('save() — new game', () => {
     it('calls addGame with the correct payload', async () => {
-      const addGame = vi.fn().mockResolvedValue(1);
+      const addGame = vi.fn().mockResolvedValue('1');
       const { component } = await createComponent({ teamId: '1', gameId: 'new' }, { addGame });
       component.game.opponent = 'Lakers U18';
       component.game.date = '2026-06-01';
-      component.game.startTime = '19:30';
-      component.game.homeAway = 'away';
-      component.game.scoreUs = 80;
-      component.game.scoreThem = 70;
+      component.game.start_time = '19:30';
+      component.game.home_away = 'away';
+      component.game.score_us = 80;
+      component.game.score_them = 70;
       component.game.notes = 'Tough game';
 
       await component.save();
 
       expect(addGame).toHaveBeenCalledWith({
-        teamId: 1,
+        team_id: '1',
         date: '2026-06-01',
-        startTime: '19:30',
+        start_time: '19:30',
         opponent: 'Lakers U18',
-        homeAway: 'away',
-        scoreUs: 80,
-        scoreThem: 70,
+        home_away: 'away',
+        score_us: 80,
+        score_them: 70,
         notes: 'Tough game',
       });
     });
 
     it('does not call addGame when opponent is empty', async () => {
-      const addGame = vi.fn().mockResolvedValue(1);
+      const addGame = vi.fn().mockResolvedValue('1');
       const { component } = await createComponent({ teamId: '1', gameId: 'new' }, { addGame });
       component.game.opponent = '';
       await component.save();
@@ -190,7 +194,7 @@ describe('GameDetailComponent', () => {
     });
 
     it('does not call addGame when opponent is whitespace only', async () => {
-      const addGame = vi.fn().mockResolvedValue(1);
+      const addGame = vi.fn().mockResolvedValue('1');
       const { component } = await createComponent({ teamId: '1', gameId: 'new' }, { addGame });
       component.game.opponent = '   ';
       await component.save();
@@ -198,7 +202,7 @@ describe('GameDetailComponent', () => {
     });
 
     it('trims the opponent name before saving', async () => {
-      const addGame = vi.fn().mockResolvedValue(1);
+      const addGame = vi.fn().mockResolvedValue('1');
       const { component } = await createComponent({ teamId: '1', gameId: 'new' }, { addGame });
       component.game.opponent = '  Bulls U18  ';
       await component.save();
@@ -207,17 +211,17 @@ describe('GameDetailComponent', () => {
     });
 
     it('navigates back after a successful save', async () => {
-      const addGame = vi.fn().mockResolvedValue(1);
+      const addGame = vi.fn().mockResolvedValue('1');
       const { component } = await createComponent({ teamId: '1', gameId: 'new' }, { addGame });
       const router = TestBed.inject(Router);
       const spy = vi.spyOn(router, 'navigate');
       component.game.opponent = 'Bulls';
       await component.save();
-      expect(spy).toHaveBeenCalledWith(['/teams', 1, 'games']);
+      expect(spy).toHaveBeenCalledWith(['/teams', '1', 'games']);
     });
 
     it('resets saving to false after a successful save', async () => {
-      const addGame = vi.fn().mockResolvedValue(1);
+      const addGame = vi.fn().mockResolvedValue('1');
       const { component } = await createComponent({ teamId: '1', gameId: 'new' }, { addGame });
       component.game.opponent = 'Bulls';
       await component.save();
@@ -239,7 +243,7 @@ describe('GameDetailComponent', () => {
     it('calls updateGame (not addGame) for an existing game', async () => {
       const getGame    = vi.fn().mockResolvedValue(EXISTING_GAME);
       const updateGame = vi.fn().mockResolvedValue(undefined);
-      const addGame    = vi.fn().mockResolvedValue(1);
+      const addGame    = vi.fn().mockResolvedValue('1');
       const { component } = await createComponent(
         { teamId: '1', gameId: '7' },
         { getGame, updateGame, addGame },
@@ -257,7 +261,7 @@ describe('GameDetailComponent', () => {
         { getGame, updateGame },
       );
       await component.save();
-      expect(updateGame.mock.calls[0][0]).toBe(7);
+      expect(updateGame.mock.calls[0][0]).toBe('7');
     });
 
     it('navigates back after successfully updating', async () => {
@@ -270,7 +274,7 @@ describe('GameDetailComponent', () => {
       const router = TestBed.inject(Router);
       const spy = vi.spyOn(router, 'navigate');
       await component.save();
-      expect(spy).toHaveBeenCalledWith(['/teams', 1, 'games']);
+      expect(spy).toHaveBeenCalledWith(['/teams', '1', 'games']);
     });
   });
 
@@ -286,7 +290,7 @@ describe('GameDetailComponent', () => {
         { getGame, deleteGame },
       );
       await component.deleteGame();
-      expect(deleteGame).toHaveBeenCalledWith(7);
+      expect(deleteGame).toHaveBeenCalledWith('7');
     });
 
     it('navigates away after deletion', async () => {
@@ -300,7 +304,7 @@ describe('GameDetailComponent', () => {
       const router = TestBed.inject(Router);
       const spy = vi.spyOn(router, 'navigate');
       await component.deleteGame();
-      expect(spy).toHaveBeenCalledWith(['/teams', 1, 'games']);
+      expect(spy).toHaveBeenCalledWith(['/teams', '1', 'games']);
     });
 
     it('does not call deleteGame when confirm returns false', async () => {
@@ -319,14 +323,14 @@ describe('GameDetailComponent', () => {
   // ── teamId parsing ────────────────────────────────────────────────
 
   describe('teamId', () => {
-    it('parses teamId as a number from the route snapshot', async () => {
+    it('reads teamId as a string from the route snapshot', async () => {
       const { component } = await createComponent({ teamId: '5', gameId: 'new' });
-      expect(component.teamId).toBe(5);
+      expect(component.teamId).toBe('5');
     });
 
-    it('defaults teamId to 0 when route param is missing', async () => {
+    it('defaults teamId to empty string when route param is missing', async () => {
       const { component } = await createComponent({ teamId: null, gameId: 'new' });
-      expect(component.teamId).toBe(0);
+      expect(component.teamId).toBe('');
     });
   });
 });

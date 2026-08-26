@@ -4,11 +4,11 @@ import { TeamNotesComponent } from './team-notes.component';
 import { TeamService } from '../../../core/services/team.service';
 import { Team, TeamNote } from '../../../shared/models/models';
 
-const TEAM: Team = { id: 1, name: 'Lakers U18', description: '' };
+const TEAM: Team = { id: '1', name: 'Lakers U18', description: '' };
 
 const NOTES: TeamNote[] = [
-  { id: 1, team_id: 1, date: '2026-06-05', content: 'Worked on defense' },
-  { id: 2, team_id: 1, date: '2026-06-01', content: 'Good session today' },
+  { id: '1', team_id: '1', date: '2026-06-05', content: 'Worked on defense' },
+  { id: '2', team_id: '1', date: '2026-06-01', content: 'Good session today' },
 ];
 
 describe('TeamNotesComponent', () => {
@@ -19,7 +19,7 @@ describe('TeamNotesComponent', () => {
     service = {
       get:        vi.fn().mockResolvedValue(TEAM),
       listNotes:  vi.fn().mockResolvedValue([]),
-      saveNote:   vi.fn().mockResolvedValue(1),
+      saveNote:   vi.fn().mockResolvedValue('1'),
       deleteNote: vi.fn().mockResolvedValue(undefined),
     };
 
@@ -83,13 +83,13 @@ describe('TeamNotesComponent', () => {
       await component.addEntry();
 
       const saved = service.saveNote.mock.calls[0][0];
-      expect(saved.team_id).toBe(1);
+      expect(saved.team_id).toBe('1');
       expect(saved.date).toBe('2026-06-08');
       expect(saved.content).toBe('Great defense drill');
     });
 
     it('reloads entries after saving', async () => {
-      const note: TeamNote = { id: 3, team_id: 1, date: '2026-06-08', content: 'New note' };
+      const note: TeamNote = { id: '3', team_id: '1', date: '2026-06-08', content: 'New note' };
       service.listNotes.mockResolvedValue([note]);
       component.newEntry = { date: '2026-06-08', content: 'New note' };
 
@@ -133,9 +133,9 @@ describe('TeamNotesComponent', () => {
     it('calls deleteNote with the correct id', async () => {
       service.listNotes.mockResolvedValue([]);
 
-      await component.deleteEntry(42);
+      await component.deleteEntry('42');
 
-      expect(service.deleteNote).toHaveBeenCalledWith(42);
+      expect(service.deleteNote).toHaveBeenCalledWith('42');
     });
 
     it('reloads entries after deleting', async () => {
@@ -144,10 +144,10 @@ describe('TeamNotesComponent', () => {
       expect(component.entries()).toHaveLength(2);
 
       service.listNotes.mockResolvedValue([NOTES[0]]);
-      await component.deleteEntry(2);
+      await component.deleteEntry('2');
 
       expect(component.entries()).toHaveLength(1);
-      expect(component.entries()[0].id).toBe(1);
+      expect(component.entries()[0].id).toBe('1');
     });
   });
 });

@@ -4,24 +4,24 @@ import { GamesListComponent } from './games-list.component';
 import { GameService } from '../../../core/services/game.service';
 import { Game } from '../../../shared/models/models';
 
-function game(id: number, overrides: Partial<Game> = {}): Game {
+function game(id: string, overrides: Partial<Game> = {}): Game {
   return {
     id,
-    teamId: 1,
+    team_id: '1',
     date: '2026-05-01',
     opponent: `Opponent ${id}`,
-    homeAway: 'home',
-    scoreUs: null,
-    scoreThem: null,
+    home_away: 'home',
+    score_us: null,
+    score_them: null,
     notes: '',
     ...overrides,
   };
 }
 
 const GAMES: Game[] = [
-  game(1, { date: '2026-05-10', opponent: 'Bulls U18', scoreUs: 78, scoreThem: 65 }),
-  game(2, { date: '2026-04-20', opponent: 'Celtics U18', scoreUs: null, scoreThem: null }),
-  game(3, { date: '2026-03-05', opponent: 'Heat U18', homeAway: 'away', scoreUs: 55, scoreThem: 60 }),
+  game('1', { date: '2026-05-10', opponent: 'Bulls U18', score_us: 78, score_them: 65 }),
+  game('2', { date: '2026-04-20', opponent: 'Celtics U18', score_us: null, score_them: null }),
+  game('3', { date: '2026-03-05', opponent: 'Heat U18', home_away: 'away', score_us: 55, score_them: 60 }),
 ];
 
 describe('GamesListComponent', () => {
@@ -79,43 +79,43 @@ describe('GamesListComponent', () => {
     });
 
     it('calls getGamesByTeam with the teamId from the route', () => {
-      expect(service.getGamesByTeam).toHaveBeenCalledWith(1);
+      expect(service.getGamesByTeam).toHaveBeenCalledWith('1');
     });
   });
 
   // ── teamId ──────────────────────────────────────────────────────
 
   describe('teamId', () => {
-    it('parses teamId as a number from the route snapshot', () => {
-      expect(component.teamId).toBe(1);
+    it('reads teamId as a string from the route snapshot', () => {
+      expect(component.teamId).toBe('1');
     });
   });
 
   // ── score() helper ───────────────────────────────────────────────
 
   describe('score()', () => {
-    it('returns "TBD" when scoreUs is null', () => {
-      const g = game(1, { scoreUs: null, scoreThem: 50 });
+    it('returns "TBD" when score_us is null', () => {
+      const g = game('1', { score_us: null, score_them: 50 });
       expect(component.score(g)).toBe('TBD');
     });
 
-    it('returns "TBD" when scoreThem is null', () => {
-      const g = game(1, { scoreUs: 80, scoreThem: null });
+    it('returns "TBD" when score_them is null', () => {
+      const g = game('1', { score_us: 80, score_them: null });
       expect(component.score(g)).toBe('TBD');
     });
 
     it('returns "TBD" when both scores are null', () => {
-      const g = game(1, { scoreUs: null, scoreThem: null });
+      const g = game('1', { score_us: null, score_them: null });
       expect(component.score(g)).toBe('TBD');
     });
 
     it('returns "X - Y" when both scores are set', () => {
-      const g = game(1, { scoreUs: 78, scoreThem: 65 });
+      const g = game('1', { score_us: 78, score_them: 65 });
       expect(component.score(g)).toBe('78 - 65');
     });
 
     it('returns "0 - 0" when both scores are zero', () => {
-      const g = game(1, { scoreUs: 0, scoreThem: 0 });
+      const g = game('1', { score_us: 0, score_them: 0 });
       expect(component.score(g)).toBe('0 - 0');
     });
   });
@@ -126,7 +126,7 @@ describe('GamesListComponent', () => {
     it('navigates to the new-game route', () => {
       const spy = vi.spyOn(router, 'navigate');
       component.addGame();
-      expect(spy).toHaveBeenCalledWith(['/teams', 1, 'games', 'new']);
+      expect(spy).toHaveBeenCalledWith(['/teams', '1', 'games', 'new']);
     });
   });
 
@@ -135,8 +135,8 @@ describe('GamesListComponent', () => {
   describe('openGame()', () => {
     it('navigates to the game detail route with the given id', () => {
       const spy = vi.spyOn(router, 'navigate');
-      component.openGame(42);
-      expect(spy).toHaveBeenCalledWith(['/teams', 1, 'games', 42]);
+      component.openGame('42');
+      expect(spy).toHaveBeenCalledWith(['/teams', '1', 'games', '42']);
     });
   });
 
