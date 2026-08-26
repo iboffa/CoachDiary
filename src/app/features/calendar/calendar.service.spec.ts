@@ -11,17 +11,17 @@ import { TasksService } from '../../core/services/tasks.service';
 import { Game, TrainingSession, SeasonPlan, TeamNote } from '../../shared/models/models';
 import { CalendarEvent } from './calendar-event.model';
 
-const TEAM_ID = 1;
+const TEAM_ID = '1';
 
 function makeGame(overrides: Partial<Game> = {}): Game {
   return {
-    id: 10,
-    teamId: TEAM_ID,
+    id: '10',
+    team_id: TEAM_ID,
     date: '2026-06-15',
     opponent: 'Bulls U18',
-    homeAway: 'home',
-    scoreUs: null,
-    scoreThem: null,
+    home_away: 'home',
+    score_us: null,
+    score_them: null,
     notes: '',
     ...overrides,
   };
@@ -29,7 +29,7 @@ function makeGame(overrides: Partial<Game> = {}): Game {
 
 function makeTraining(overrides: Partial<TrainingSession> = {}): TrainingSession {
   return {
-    id: 20,
+    id: '20',
     team_id: TEAM_ID,
     name: 'Morning drill',
     date: '2026-06-10',
@@ -40,7 +40,7 @@ function makeTraining(overrides: Partial<TrainingSession> = {}): TrainingSession
 
 function makePlan(goals: string, overrides: Partial<SeasonPlan> = {}): SeasonPlan {
   return {
-    id: 30,
+    id: '30',
     team_id: TEAM_ID,
     name: '2025-26 Season',
     goals,
@@ -50,7 +50,7 @@ function makePlan(goals: string, overrides: Partial<SeasonPlan> = {}): SeasonPla
 
 function makeNote(overrides: Partial<TeamNote> = {}): TeamNote {
   return {
-    id: 40,
+    id: '40',
     team_id: TEAM_ID,
     date: '2026-06-20',
     content: 'Good practice today',
@@ -125,7 +125,7 @@ describe('CalendarService', () => {
     });
 
     it('sets a routerLink pointing to the game detail', async () => {
-      gameService.getGamesByTeam.mockResolvedValue([makeGame({ id: 10 })]);
+      gameService.getGamesByTeam.mockResolvedValue([makeGame({ id: '10' })]);
       const events = await firstValueFrom(service.getEventsForTeam(TEAM_ID));
       const event = events.find(e => e.type === 'game')!;
       expect(event.routerLink).toEqual(['/teams', String(TEAM_ID), 'games', '10']);

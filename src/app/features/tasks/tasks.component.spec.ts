@@ -6,25 +6,25 @@ import { PlayerService } from '../../core/services/player.service';
 import { Task, Player } from '../../shared/models/models';
 
 const PLAYERS: Player[] = [
-  { id: 1, team_id: 10, name: 'Jordan', number: 23, position: 'SG' },
-  { id: 2, team_id: 10, name: 'Pippen', number: 33, position: 'SF' },
+  { id: '1', team_id: '10', name: 'Jordan', number: 23, position: 'SG' },
+  { id: '2', team_id: '10', name: 'Pippen', number: 33, position: 'SF' },
 ];
 
 const TASKS: Task[] = [
   {
-    id: 1,
-    teamId: 10,
+    id: '1',
+    team_id: '10',
     title: 'Review film',
-    dueDate: '2026-06-20',
+    due_date: '2026-06-20',
     done: false,
-    createdAt: '2026-06-12T10:00:00.000Z',
+    created_at: '2026-06-12T10:00:00.000Z',
   },
   {
-    id: 2,
-    teamId: 10,
+    id: '2',
+    team_id: '10',
     title: 'Update roster',
     done: true,
-    createdAt: '2026-06-11T09:00:00.000Z',
+    created_at: '2026-06-11T09:00:00.000Z',
   },
 ];
 
@@ -36,7 +36,7 @@ describe('TasksComponent', () => {
   beforeEach(async () => {
     tasksService = {
       getTasksByTeam: vi.fn().mockResolvedValue([]),
-      addTask:        vi.fn().mockResolvedValue(1),
+      addTask:        vi.fn().mockResolvedValue('1'),
       toggleDone:     vi.fn().mockResolvedValue(undefined),
       deleteTask:     vi.fn().mockResolvedValue(undefined),
     };
@@ -73,7 +73,7 @@ describe('TasksComponent', () => {
     });
 
     it('reads teamId from route params', () => {
-      expect(component.teamId).toBe(10);
+      expect(component.teamId).toBe('10');
     });
 
     it('starts with an empty task list when the service returns none', () => {
@@ -114,11 +114,11 @@ describe('TasksComponent', () => {
       expect(sorted[1].done).toBe(true);
     });
 
-    it('sorts undone tasks by dueDate ascending, nulls last', async () => {
+    it('sorts undone tasks by due_date ascending, nulls last', async () => {
       const tasks: Task[] = [
-        { id: 3, teamId: 10, title: 'No date', done: false, createdAt: '' },
-        { id: 4, teamId: 10, title: 'Later', dueDate: '2026-07-01', done: false, createdAt: '' },
-        { id: 5, teamId: 10, title: 'Earlier', dueDate: '2026-06-15', done: false, createdAt: '' },
+        { id: '3', team_id: '10', title: 'No date', done: false, created_at: '' },
+        { id: '4', team_id: '10', title: 'Later', due_date: '2026-07-01', done: false, created_at: '' },
+        { id: '5', team_id: '10', title: 'Earlier', due_date: '2026-06-15', done: false, created_at: '' },
       ];
       tasksService.getTasksByTeam.mockResolvedValue(tasks);
       await (component as any).load();
@@ -144,12 +144,12 @@ describe('TasksComponent', () => {
       expect(tasksService.addTask).not.toHaveBeenCalled();
     });
 
-    it('calls addTask with correct teamId, title, and done=false', async () => {
+    it('calls addTask with correct team_id, title, and done=false', async () => {
       tasksService.getTasksByTeam.mockResolvedValue([]);
       component.newTitle = 'Scout opponents';
       await component.addTask();
       const call = tasksService.addTask.mock.calls[0][0];
-      expect(call.teamId).toBe(10);
+      expect(call.team_id).toBe('10');
       expect(call.title).toBe('Scout opponents');
       expect(call.done).toBe(false);
     });
@@ -161,22 +161,22 @@ describe('TasksComponent', () => {
       expect(component.newTitle).toBe('');
     });
 
-    it('includes optional dueDate when set', async () => {
+    it('includes optional due_date when set', async () => {
       tasksService.getTasksByTeam.mockResolvedValue([]);
       component.newTitle = 'Task with date';
       component.newDueDate = '2026-07-15';
       await component.addTask();
       const call = tasksService.addTask.mock.calls[0][0];
-      expect(call.dueDate).toBe('2026-07-15');
+      expect(call.due_date).toBe('2026-07-15');
     });
 
-    it('omits dueDate when not set', async () => {
+    it('omits due_date when not set', async () => {
       tasksService.getTasksByTeam.mockResolvedValue([]);
       component.newTitle = 'Task without date';
       component.newDueDate = '';
       await component.addTask();
       const call = tasksService.addTask.mock.calls[0][0];
-      expect(call.dueDate).toBeUndefined();
+      expect(call.due_date).toBeUndefined();
     });
   });
 
@@ -196,8 +196,8 @@ describe('TasksComponent', () => {
   describe('deleteTask', () => {
     it('calls tasksService.deleteTask with the correct id', async () => {
       tasksService.getTasksByTeam.mockResolvedValue([]);
-      await component.deleteTask(42);
-      expect(tasksService.deleteTask).toHaveBeenCalledWith(42);
+      await component.deleteTask('42');
+      expect(tasksService.deleteTask).toHaveBeenCalledWith('42');
     });
   });
 
@@ -211,11 +211,11 @@ describe('TasksComponent', () => {
     });
 
     it('returns the player name when the id matches', () => {
-      expect(component.playerName(1)).toBe('Jordan');
+      expect(component.playerName('1')).toBe('Jordan');
     });
 
     it('returns an empty string for unknown player id', () => {
-      expect(component.playerName(999)).toBe('');
+      expect(component.playerName('999')).toBe('');
     });
 
     it('returns an empty string when playerId is undefined', () => {

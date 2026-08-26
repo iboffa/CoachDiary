@@ -4,24 +4,24 @@ import { DbService } from './db.service';
 import { Game } from '../../shared/models/models';
 
 const GAME_1: Game = {
-  id: 1,
-  teamId: 10,
+  id: '1',
+  team_id: '10',
   date: '2026-05-01',
   opponent: 'Bulls U18',
-  homeAway: 'home',
-  scoreUs: 78,
-  scoreThem: 65,
+  home_away: 'home',
+  score_us: 78,
+  score_them: 65,
   notes: 'Good win',
 };
 
 const GAME_2: Game = {
-  id: 2,
-  teamId: 10,
+  id: '2',
+  team_id: '10',
   date: '2026-04-15',
   opponent: 'Celtics U18',
-  homeAway: 'away',
-  scoreUs: null,
-  scoreThem: null,
+  home_away: 'away',
+  score_us: null,
+  score_them: null,
   notes: '',
 };
 
@@ -33,7 +33,7 @@ describe('GameService', () => {
     db = {
       listGames:  vi.fn().mockResolvedValue([]),
       getGame:    vi.fn().mockResolvedValue(undefined),
-      addGame:    vi.fn().mockResolvedValue(1),
+      addGame:    vi.fn().mockResolvedValue('1'),
       updateGame: vi.fn().mockResolvedValue(undefined),
       deleteGame: vi.fn().mockResolvedValue(undefined),
     };
@@ -53,20 +53,20 @@ describe('GameService', () => {
   describe('getGamesByTeam', () => {
     it('returns games filtered by teamId from DbService', async () => {
       db.listGames.mockResolvedValue([GAME_1, GAME_2]);
-      const result = await service.getGamesByTeam(10);
+      const result = await service.getGamesByTeam('10');
       expect(result).toEqual([GAME_1, GAME_2]);
-      expect(db.listGames).toHaveBeenCalledWith(10);
+      expect(db.listGames).toHaveBeenCalledWith('10');
     });
 
     it('returns an empty array when the team has no games', async () => {
       db.listGames.mockResolvedValue([]);
-      const result = await service.getGamesByTeam(99);
+      const result = await service.getGamesByTeam('99');
       expect(result).toEqual([]);
     });
 
     it('passes the correct teamId to DbService', async () => {
-      await service.getGamesByTeam(42);
-      expect(db.listGames).toHaveBeenCalledWith(42);
+      await service.getGamesByTeam('42');
+      expect(db.listGames).toHaveBeenCalledWith('42');
     });
   });
 
@@ -75,14 +75,14 @@ describe('GameService', () => {
   describe('getGame', () => {
     it('returns a game by id from DbService', async () => {
       db.getGame.mockResolvedValue(GAME_1);
-      const result = await service.getGame(1);
+      const result = await service.getGame('1');
       expect(result).toEqual(GAME_1);
-      expect(db.getGame).toHaveBeenCalledWith(1);
+      expect(db.getGame).toHaveBeenCalledWith('1');
     });
 
     it('returns undefined when no game matches the id', async () => {
       db.getGame.mockResolvedValue(undefined);
-      const result = await service.getGame(999);
+      const result = await service.getGame('999');
       expect(result).toBeUndefined();
     });
   });
@@ -92,18 +92,18 @@ describe('GameService', () => {
   describe('addGame', () => {
     it('delegates to DbService.addGame with the provided payload', async () => {
       const payload: Omit<Game, 'id'> = {
-        teamId: 10,
+        team_id: '10',
         date: '2026-06-01',
         opponent: 'Nets U18',
-        homeAway: 'home',
-        scoreUs: null,
-        scoreThem: null,
+        home_away: 'home',
+        score_us: null,
+        score_them: null,
         notes: '',
       };
-      db.addGame.mockResolvedValue(5);
+      db.addGame.mockResolvedValue('5');
       const id = await service.addGame(payload);
       expect(db.addGame).toHaveBeenCalledWith(payload);
-      expect(id).toBe(5);
+      expect(id).toBe('5');
     });
   });
 
@@ -111,9 +111,9 @@ describe('GameService', () => {
 
   describe('updateGame', () => {
     it('delegates to DbService.updateGame with id and changes', async () => {
-      const changes: Partial<Omit<Game, 'id'>> = { scoreUs: 80, scoreThem: 70 };
-      await service.updateGame(1, changes);
-      expect(db.updateGame).toHaveBeenCalledWith(1, changes);
+      const changes: Partial<Omit<Game, 'id'>> = { score_us: 80, score_them: 70 };
+      await service.updateGame('1', changes);
+      expect(db.updateGame).toHaveBeenCalledWith('1', changes);
     });
   });
 
@@ -121,8 +121,8 @@ describe('GameService', () => {
 
   describe('deleteGame', () => {
     it('delegates to DbService.deleteGame with the correct id', async () => {
-      await service.deleteGame(1);
-      expect(db.deleteGame).toHaveBeenCalledWith(1);
+      await service.deleteGame('1');
+      expect(db.deleteGame).toHaveBeenCalledWith('1');
     });
   });
 });

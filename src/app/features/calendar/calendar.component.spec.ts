@@ -13,8 +13,8 @@ function makeEvent(overrides: Partial<CalendarEvent> = {}): CalendarEvent {
     date: new Date('2026-06-15T00:00:00'),
     title: 'Match vs Bulls',
     type: 'game',
-    startTime: null,
-    durationMinutes: 120,
+    start_time: null,
+    duration_minutes: 120,
     routerLink: ['/teams', '1', 'games', '1'],
     ...overrides,
   };
@@ -63,27 +63,27 @@ describe('CalendarComponent', () => {
   // ── chipLabel ──────────────────────────────────────────────────
 
   describe('chipLabel()', () => {
-    it('returns the event title when no startTime is set', async () => {
+    it('returns the event title when no start_time is set', async () => {
       const { component } = await createComponent();
-      const ev = makeEvent({ title: 'Team Training', startTime: null });
+      const ev = makeEvent({ title: 'Team Training', start_time: null });
       expect(component.chipLabel(ev)).toBe('Team Training');
     });
 
-    it('prepends startTime when set', async () => {
+    it('prepends start_time when set', async () => {
       const { component } = await createComponent();
-      const ev = makeEvent({ title: 'Team Training', startTime: '09:00' });
+      const ev = makeEvent({ title: 'Team Training', start_time: '09:00' });
       expect(component.chipLabel(ev)).toBe('09:00 Team Training');
     });
 
     it('prepends the recurring symbol when isRecurring is true', async () => {
       const { component } = await createComponent();
-      const ev = makeEvent({ title: 'Training', startTime: null, isRecurring: true });
+      const ev = makeEvent({ title: 'Training', start_time: null, isRecurring: true });
       expect(component.chipLabel(ev)).toBe('↻ Training');
     });
 
-    it('prepends both recurring symbol and startTime', async () => {
+    it('prepends both recurring symbol and start_time', async () => {
       const { component } = await createComponent();
-      const ev = makeEvent({ title: 'Training', startTime: '08:30', isRecurring: true });
+      const ev = makeEvent({ title: 'Training', start_time: '08:30', isRecurring: true });
       expect(component.chipLabel(ev)).toBe('↻ 08:30 Training');
     });
   });
@@ -120,27 +120,27 @@ describe('CalendarComponent', () => {
   // ── timeDurationLabel ──────────────────────────────────────────
 
   describe('timeDurationLabel()', () => {
-    it('returns empty string when neither startTime nor duration is set', async () => {
+    it('returns empty string when neither start_time nor duration is set', async () => {
       const { component } = await createComponent();
-      const ev = makeEvent({ startTime: null, durationMinutes: null });
+      const ev = makeEvent({ start_time: null, duration_minutes: null });
       expect(component.timeDurationLabel(ev)).toBe('');
     });
 
-    it('returns only startTime when no duration', async () => {
+    it('returns only start_time when no duration', async () => {
       const { component } = await createComponent();
-      const ev = makeEvent({ startTime: '10:00', durationMinutes: null });
+      const ev = makeEvent({ start_time: '10:00', duration_minutes: null });
       expect(component.timeDurationLabel(ev)).toBe('10:00');
     });
 
-    it('returns only duration when no startTime', async () => {
+    it('returns only duration when no start_time', async () => {
       const { component } = await createComponent();
-      const ev = makeEvent({ startTime: null, durationMinutes: 60 });
+      const ev = makeEvent({ start_time: null, duration_minutes: 60 });
       expect(component.timeDurationLabel(ev)).toBe('60 min');
     });
 
-    it('joins startTime and duration with " · " when both are set', async () => {
+    it('joins start_time and duration with " · " when both are set', async () => {
       const { component } = await createComponent();
-      const ev = makeEvent({ startTime: '10:00', durationMinutes: 90 });
+      const ev = makeEvent({ start_time: '10:00', duration_minutes: 90 });
       expect(component.timeDurationLabel(ev)).toBe('10:00 · 90 min');
     });
   });
