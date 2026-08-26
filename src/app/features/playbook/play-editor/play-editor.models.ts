@@ -4,7 +4,7 @@ export type Tool = 'select' | 'draw-path' | 'erase';
 export type ActionType = 'dribble' | 'pass' | 'cut' | 'screen' | 'dribble-handoff' | 'shoot';
 export type AnimState = 'idle' | 'playing' | 'paused';
 export type TokenType = 'offense' | 'defense';
-export type Point = { x: number; y: number };
+export interface Point { x: number; y: number }
 
 export interface PlayerToken {
   fabricGroup: Group;

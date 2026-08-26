@@ -93,7 +93,7 @@ export interface Play {
   updated_at?: string;
 }
 
-export interface PlaySummary extends Omit<Play, 'canvas_state'> {}
+export type PlaySummary = Omit<Play, 'canvas_state'>;
 
 export interface Drill {
   id: string;

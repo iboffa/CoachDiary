@@ -203,7 +203,7 @@ describe('TrainingComponent', () => {
 
     it('moves the dragged item to the drop target position', () => {
       component.onDrillDragStart(0);
-      component.onDrillDrop(2, { preventDefault: () => {} } as DragEvent);
+      component.onDrillDrop(2, { preventDefault: () => undefined } as DragEvent);
       expect(component.editingDrills()[0].id).toBe('b');
       expect(component.editingDrills()[1].id).toBe('c');
       expect(component.editingDrills()[2].id).toBe('a');
@@ -212,13 +212,13 @@ describe('TrainingComponent', () => {
     it('does not reorder when dropped on the same index', () => {
       const before = component.editingDrills().map(d => d.id);
       component.onDrillDragStart(1);
-      component.onDrillDrop(1, { preventDefault: () => {} } as DragEvent);
+      component.onDrillDrop(1, { preventDefault: () => undefined } as DragEvent);
       expect(component.editingDrills().map(d => d.id)).toEqual(before);
     });
 
     it('clears drag state after drop', () => {
       component.onDrillDragStart(0);
-      component.onDrillDrop(1, { preventDefault: () => {} } as DragEvent);
+      component.onDrillDrop(1, { preventDefault: () => undefined } as DragEvent);
       expect(component.dragIndex()).toBeNull();
       expect(component.dragOverIndex()).toBeNull();
     });

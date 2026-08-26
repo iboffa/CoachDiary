@@ -69,7 +69,7 @@ export class AuthService {
     this._oauthInFlight$.next(false);
 
     if (Capacitor.isNativePlatform()) {
-      await Browser.close().catch(() => {});
+      await Browser.close().catch(() => undefined);
     }
 
     if (error) {

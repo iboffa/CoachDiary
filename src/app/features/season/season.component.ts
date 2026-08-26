@@ -4,7 +4,7 @@ import { DatePipe } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { SeasonPlanService } from '../../core/services/season-plan.service';
 import { RecurringScheduleService } from '../calendar/recurring-schedule.service';
-import { SeasonGoal, SeasonPlan, RecurringSchedule } from '../../shared/models/models';
+import { SeasonGoal, SeasonPlan } from '../../shared/models/models';
 import { TimePickerComponent } from '../../shared/components/time-picker/time-picker.component';
 
 const DAY_ABBRS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];

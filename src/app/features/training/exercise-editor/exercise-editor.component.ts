@@ -57,7 +57,6 @@ import {
   SavedTokenPosition,
   syncTokensToPhasePositions,
   syncTokensToResolvedPositions,
-  syncTokensToStoredPositions,
 } from '../../playbook/play-editor/play-editor-token-position.utils';
 import {
   applyActivePathControlEdit as applyFabricActivePathControlEdit,
@@ -84,7 +83,7 @@ import { ExerciseToken, ExerciseTokenType, ExercisePhase } from './exercise-edit
 
 interface ExerciseUndoSnapshot {
   phasePaths: StoredPath[];
-  tokens: Array<{ id: string; type: ExerciseTokenType; label: string; position: Point }>;
+  tokens: { id: string; type: ExerciseTokenType; label: string; position: Point }[];
   ballCarrierIds: string[];
   offenseCount: number;
   defenseCount: number;
@@ -150,7 +149,7 @@ export class ExerciseEditorComponent implements OnDestroy {
   private readonly undoStackSize = signal(0);
   readonly canUndo = computed(() => this.undoStackSize() > 0);
 
-  readonly categories: Array<'offense' | 'defense' | 'transition' | 'inbound' | 'press-break'> = [
+  readonly categories: ('offense' | 'defense' | 'transition' | 'inbound' | 'press-break')[] = [
     'offense', 'defense', 'transition', 'inbound', 'press-break',
   ];
 
@@ -1317,7 +1316,7 @@ export class ExerciseEditorComponent implements OnDestroy {
     const carrierPositions = phase.ballCarrierIds.map(id => {
       const token = this.tokens.find(t => t.id === id);
       return token ? { id, pos: phase.playerPositions[id] ?? token.position } : null;
-    }).filter(Boolean) as Array<{ id: string; pos: Point }>;
+    }).filter(Boolean) as { id: string; pos: Point }[];
 
     this.placeBallIndicatorsAt(
       carrierPositions.map(c => c.id),
@@ -1439,7 +1438,7 @@ export class ExerciseEditorComponent implements OnDestroy {
     const session = await this.trainingService.get(this.sessionId);
     if (!session) return;
 
-    let drills: Drill[] = [];
+    let drills: Drill[];
     try { drills = JSON.parse(session.drills || '[]'); } catch { return; }
     const drill = drills.find(d => d.id === this.drillId);
     if (!drill) return;

@@ -223,7 +223,6 @@ export function refreshShadowTokens({
 
 export function applyShadowEndpointEdit({
   fabricCanvas,
-  tokens,
   currentPhasePaths,
   shadow,
   activePathEdit,

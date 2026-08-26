@@ -21,7 +21,7 @@ export interface ExercisePhase {
 export interface ExerciseCanvasState {
   version: 1;
   courtMode: CourtMode;
-  tokens: Array<{ id: string; type: ExerciseTokenType; label: string; position: Point }>;
+  tokens: { id: string; type: ExerciseTokenType; label: string; position: Point }[];
   phases: ExercisePhase[];
   ballCarrierIds: string[];
   currentPhaseIndex: number;

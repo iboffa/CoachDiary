@@ -91,7 +91,7 @@ import {
 
 interface UndoSnapshot {
   phasePaths: StoredPath[];
-  tokens: Array<{ id: string; type: 'offense' | 'defense'; label: string; position: Point }>;
+  tokens: { id: string; type: 'offense' | 'defense'; label: string; position: Point }[];
   ballCarrierId: string | null;
   defenseCount: number;
 }

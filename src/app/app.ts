@@ -79,8 +79,8 @@ export class App {
   }
 
   private syncSidebar(url: string): void {
-    const teamMatch = url.match(/\/teams\/([^\/]+)/);
-    const oppMatch  = url.match(/\/opponents\/([^\/]+)/);
+    const teamMatch = url.match(/\/teams\/([^/]+)/);
+    const oppMatch  = url.match(/\/opponents\/([^/]+)/);
 
     if (oppMatch) {
       const oppId  = oppMatch[1];

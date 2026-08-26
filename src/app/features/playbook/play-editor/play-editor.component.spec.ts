@@ -253,7 +253,6 @@ describe('PlayEditorComponent - Pick and Roll & Pass/Shoot Test', () => {
     await fixture.whenStable();
 
     const tokens = (component as any).tokens;
-    const pg = tokens.find((t: any) => t.id === 'offense-1');
 
     expect(component.ballCarrierId()).toBe('offense-1');
 

@@ -10,8 +10,6 @@ const TOKEN_COLOR: Record<ExerciseTokenType, string> = {
   cone:    '#f97316',
 };
 
-// FIBA constants (pixels, S=34)
-const CY = 255;
 const WHITE = 'rgba(255,255,255,0.9)';
 
 @Component({

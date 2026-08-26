@@ -82,7 +82,7 @@ export class CalendarService {
 
         for (const plan of seasonPlans) {
           if (!plan.goals) continue;
-          let goals: SeasonGoal[] = [];
+          let goals: SeasonGoal[];
           try {
             goals = JSON.parse(plan.goals);
           } catch {
