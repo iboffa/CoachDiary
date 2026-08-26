@@ -15,7 +15,11 @@
     "cap:sync": "npm run build:renderer && npx cap sync android",
     "cap:open:android": "npx cap open android",
     "android:dev": "npm run cap:sync && npx cap open android",
-    "lint": "ng lint"
+    "lint": "ng lint",
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "*.{ts,html}": "eslint --fix"
   },
   "private": true,
   "packageManager": "npm@10.9.8",
@@ -54,7 +58,9 @@
     "cross-env": "^7.0.3",
     "electron-rebuild": "^3.2.9",
     "eslint": "^10.6.0",
+    "husky": "^9.1.7",
     "jsdom": "^28.0.0",
+    "lint-staged": "^17.3.0",
     "prettier": "^3.8.1",
     "typescript": "~6.0.2",
     "typescript-eslint": "8.62.1",

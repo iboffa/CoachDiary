@@ -270,8 +270,6 @@ describe('PlayEditorComponent - Pick and Roll & Pass/Shoot Test', () => {
     fixture.detectChanges();
     await fixture.whenStable();
 
-    const tokens = (component as any).tokens;
-
     expect(component.ballCarrierId()).toBe('offense-1');
 
     // 1. Simulate selecting Pass from PG

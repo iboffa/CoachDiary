@@ -101,7 +101,6 @@ describe('RecurringScheduleService', () => {
     it('generates events from multiple active schedules', () => {
       const s1 = makeSchedule({ id: '1', days_of_week: [0], title: 'Morning' });
       const s2 = makeSchedule({ id: '2', days_of_week: [2], title: 'Evening' });
-      const TUE = new Date('2026-06-09T00:00:00');
       const WED = new Date('2026-06-11T00:00:00');
       const events = service.expandToEvents([s1, s2], TEAM_ID, MON, WED);
       expect(events).toHaveLength(2);
