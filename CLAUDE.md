@@ -2,6 +2,10 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Project
+
+CoachDiary is a basketball coaching app: coaches manage teams and rosters, draw and animate set plays on a court canvas (`features/playbook`), plan and log training-session drills, scout opponents, track games, and plan a season. An AI Coach chat feature (`rag-server/` + `AiCoachModalComponent`) answers basketball questions and can generate plays from a team's roster.
+
 ## Commands
 
 - `npm start` / `ng serve` — dev server at http://localhost:4200
