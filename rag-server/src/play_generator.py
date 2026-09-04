@@ -287,6 +287,13 @@ def _critique_play(description: str, data: dict) -> list[str]:
         return []
 
 
+def validate_play(description: str, data: dict, play_state: PlayEditorState) -> list[str]:
+    """Combined geometry + LLM critique validation — the single bar for 'valid'.
+    Shared by the production retry loop and the eval harness.
+    """
+    return _validate_geometry(play_state) + _critique_play(description, data)
+
+
 def _generate_raw(context: str, description: str, court_mode: str, prior_issues: list[str]) -> str:
     user_content = (
         f"Tactical knowledge:\n{context}\n\n"
@@ -339,9 +346,7 @@ def handle_generate_play(request: PlayRequest) -> PlayResponse:
                 continue
             raise
 
-        geo_issues = _validate_geometry(play_state)
-        semantic_issues = _critique_play(request.description, data)
-        all_issues = geo_issues + semantic_issues
+        all_issues = validate_play(request.description, data, play_state)
 
         if all_issues:
             print(f"[generator] validation issues: {all_issues}")
