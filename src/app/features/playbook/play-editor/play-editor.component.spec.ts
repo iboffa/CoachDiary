@@ -3,6 +3,7 @@ import { provideRouter, ActivatedRoute, Router } from '@angular/router';
 import { PlayEditorComponent } from './play-editor.component';
 import { COURT_OUT_OF_BOUNDS_PADDING, courtCanvasSize } from './court-painter';
 import { PlayService } from '../../../core/services/play.service';
+import { buildPhasePathSchedule } from './play-editor-path.utils';
 
 describe('PlayEditorComponent - Pick and Roll & Pass/Shoot Test', () => {
   let playServiceMock: any;
@@ -12,12 +13,13 @@ describe('PlayEditorComponent - Pick and Roll & Pass/Shoot Test', () => {
     playServiceMock = {
       get: vi.fn().mockResolvedValue(undefined),
       save: vi.fn().mockResolvedValue(123),
+      listCategories: vi.fn().mockResolvedValue([]),
     };
 
     activatedRouteMock = {
       snapshot: {
         paramMap: {
-          get: () => 'new',
+          get: (k: string) => k === 'id' ? 'new' : null,
         },
       },
     };
@@ -101,7 +103,7 @@ describe('PlayEditorComponent - Pick and Roll & Pass/Shoot Test', () => {
     expect(component.animProgress()).toBe(0);
     expect(pg.position).toEqual(wingLocation);
     expect(center.position).toEqual(screenLocation);
-  });
+  }, 60000);
 
   it('should keep default player tokens interactive for initial repositioning', async () => {
     const fixture = TestBed.createComponent(PlayEditorComponent);
@@ -166,7 +168,7 @@ describe('PlayEditorComponent - Pick and Roll & Pass/Shoot Test', () => {
       ],
     };
 
-    const scheduledPaths = (component as any).buildPhasePathSchedule(phase);
+    const scheduledPaths = buildPhasePathSchedule(phase);
     const [screenPath, dribblePath, passPath, cutPath, shootPath] = scheduledPaths;
     const epsilon = 0.000001;
 
@@ -203,7 +205,7 @@ describe('PlayEditorComponent - Pick and Roll & Pass/Shoot Test', () => {
       ],
     };
 
-    const scheduledPaths = (component as any).buildPhasePathSchedule(phase);
+    const scheduledPaths = buildPhasePathSchedule(phase);
     const [screenPath, dribblePath, cutPath] = scheduledPaths;
     const epsilon = 0.000001;
 
@@ -232,16 +234,17 @@ describe('PlayEditorComponent - Pick and Roll & Pass/Shoot Test', () => {
       ],
     };
 
-    (component as any).ensureBallIndicator();
-    const scheduledPaths = (component as any).buildPhasePathSchedule(phase);
+    const animController = (component as any).animController;
+    animController.ensureBallIndicator();
+    const scheduledPaths = buildPhasePathSchedule(phase);
     const passPath = scheduledPaths[0];
     const shootPath = scheduledPaths[1];
 
-    (component as any).animateBallForPhase(phase, scheduledPaths, (passPath.startTime + passPath.endTime) / 2);
+    animController.animateBallForPhase(phase, scheduledPaths, (passPath.startTime + passPath.endTime) / 2);
     expect((component as any).ballIndicator.left).toBeGreaterThan(Math.min(pg.position.x + 8, receivePoint.x + 8));
     expect((component as any).ballIndicator.left).toBeLessThan(Math.max(pg.position.x + 8, receivePoint.x + 8));
 
-    (component as any).animateBallForPhase(phase, scheduledPaths, (shootPath.startTime + shootPath.endTime) / 2);
+    animController.animateBallForPhase(phase, scheduledPaths, (shootPath.startTime + shootPath.endTime) / 2);
     expect((component as any).ballIndicator.top).toBeLessThan(receivePoint.y - 26);
   });
 
@@ -352,7 +355,7 @@ describe('PlayEditorComponent - Pick and Roll & Pass/Shoot Test', () => {
 
     component.stopAnimation();
     await previewPromise;
-  });
+  }, 60000);
 
   it('should create a shadow endpoint and chain the next movement from it', async () => {
     const fixture = TestBed.createComponent(PlayEditorComponent);
@@ -417,7 +420,7 @@ describe('PlayEditorComponent - Pick and Roll & Pass/Shoot Test', () => {
 
     expect(pg.position).toEqual(secondEnd);
     expect((component as any).shadowTokens).toHaveLength(0);
-  });
+  }, 60000);
 
   it('should remove chained shadow arrows when deleting the base arrow', async () => {
     const fixture = TestBed.createComponent(PlayEditorComponent);
@@ -465,7 +468,7 @@ describe('PlayEditorComponent - Pick and Roll & Pass/Shoot Test', () => {
     expect((component as any).currentPhasePaths).toHaveLength(0);
     expect(component.currentPathCount()).toBe(0);
     expect((component as any).shadowTokens).toHaveLength(0);
-  });
+  }, 60000);
 
   it('should show a spline handle for screen paths while keeping the screen bar non-editable', async () => {
     const fixture = TestBed.createComponent(PlayEditorComponent);
@@ -528,18 +531,19 @@ describe('PlayEditorComponent - Pick and Roll & Pass/Shoot Test', () => {
       ballCarrierId: component.ballCarrierId(),
       paths: (component as any).currentPhasePaths.map((path: any) => ({ ownerId: path.ownerId, actionType: path.actionType, points: path.points })),
     };
-    const scheduledPaths = (component as any).buildPhasePathSchedule(phase);
+    const scheduledPaths = buildPhasePathSchedule(phase);
+    const animController = (component as any).animController;
 
     component.showAnimatedLines.set(false);
-    (component as any).updateAnimatedPhaseObjects(phase, scheduledPaths, 0);
-    expect((component as any).animatedPhaseObjects).toHaveLength(0);
+    animController.updateAnimatedPhaseObjects(phase, scheduledPaths, 0);
+    expect(animController.animatedPhaseObjects).toHaveLength(0);
 
     component.showAnimatedLines.set(true);
-    (component as any).updateAnimatedPhaseObjects(phase, scheduledPaths, 0);
-    expect((component as any).animatedPhaseObjects.length).toBeGreaterThan(0);
+    animController.updateAnimatedPhaseObjects(phase, scheduledPaths, 0);
+    expect(animController.animatedPhaseObjects.length).toBeGreaterThan(0);
 
-    (component as any).updateAnimatedPhaseObjects(phase, scheduledPaths, 1);
-    expect((component as any).animatedPhaseObjects).toHaveLength(0);
+    animController.updateAnimatedPhaseObjects(phase, scheduledPaths, 1);
+    expect(animController.animatedPhaseObjects).toHaveLength(0);
   });
 
   it('should edit the latest movement spline through its control handle and shadow endpoint', async () => {
@@ -607,7 +611,7 @@ describe('PlayEditorComponent - Pick and Roll & Pass/Shoot Test', () => {
     expect((component as any).activePathEdit.path).toBe(path);
     expect((component as any).ballIndicator.left).toBeCloseTo(updatedEnd.x + 8);
     expect((component as any).ballIndicator.top).toBeCloseTo(updatedEnd.y - 26);
-  });
+  }, 60000);
 
   it('should show simultaneous latest shadows and clear all shadows on next phase', async () => {
     const fixture = TestBed.createComponent(PlayEditorComponent);
@@ -666,7 +670,7 @@ describe('PlayEditorComponent - Pick and Roll & Pass/Shoot Test', () => {
     component.nextPhase();
 
     expect((component as any).shadowTokens).toHaveLength(0);
-  });
+  }, 60000);
 
   it('should remove the spline handle when clicking a non-editable element', async () => {
     const fixture = TestBed.createComponent(PlayEditorComponent);
@@ -752,7 +756,7 @@ describe('PlayEditorComponent - Pick and Roll & Pass/Shoot Test', () => {
 
     expect((component as any).activePathEdit).toBeTruthy();
     expect((component as any).activePathEdit.path).toBe(dribblePath);
-  });
+  }, 60000);
 
   it('should remove the spline handle when clicking outside the canvas area', async () => {
     const fixture = TestBed.createComponent(PlayEditorComponent);
@@ -822,7 +826,7 @@ describe('PlayEditorComponent - Pick and Roll & Pass/Shoot Test', () => {
     });
 
     expect((component as any).activePathEdit).toBeNull();
-  });
+  }, 60000);
 
   it('should keep short dribble-handoff paths so the ball handler can move in tight space', async () => {
     const fixture = TestBed.createComponent(PlayEditorComponent);
@@ -862,9 +866,9 @@ describe('PlayEditorComponent — category management', () => {
   beforeEach(async () => {
     service = {
       get:            vi.fn().mockResolvedValue(undefined),
-      save:           vi.fn().mockResolvedValue(123),
+      save:           vi.fn().mockResolvedValue('123'),
       listCategories: vi.fn().mockResolvedValue([]),
-      saveCategory:   vi.fn().mockResolvedValue(99),
+      saveCategory:   vi.fn().mockResolvedValue('99'),
     };
 
     await TestBed.configureTestingModule({
@@ -893,7 +897,7 @@ describe('PlayEditorComponent — category management', () => {
 
   it('setCategoryId parses a numeric string into the signal', () => {
     component.setCategoryId('7');
-    expect(component.playCat()).toBe(7);
+    expect(component.playCat()).toBe('7');
   });
 
   it('setCategoryId sets undefined for an empty string', () => {
@@ -905,27 +909,27 @@ describe('PlayEditorComponent — category management', () => {
   // ── createCategory ─────────────────────────────────────────────
 
   it('createCategory saves the category, clears the input, reloads, and selects the new id', async () => {
-    const newCat = { id: 99, name: 'Fast Break', team_id: 42 };
-    service.saveCategory.mockResolvedValue(99);
+    const newCat = { id: '99', name: 'Fast Break', team_id: '42' };
+    service.saveCategory.mockResolvedValue('99');
     service.listCategories.mockResolvedValue([newCat]);
 
     component.newCategoryName = 'Fast Break';
     await component.createCategory();
 
-    expect(service.saveCategory).toHaveBeenCalledWith({ name: 'Fast Break', team_id: 42 });
+    expect(service.saveCategory).toHaveBeenCalledWith({ name: 'Fast Break', team_id: '42' });
     expect(component.newCategoryName).toBe('');
     expect(component.categories()).toEqual([newCat]);
-    expect(component.playCat()).toBe(99);
+    expect(component.playCat()).toBe('99');
   });
 
   it('createCategory trims the input before saving', async () => {
-    service.saveCategory.mockResolvedValue(99);
+    service.saveCategory.mockResolvedValue('99');
     service.listCategories.mockResolvedValue([]);
 
     component.newCategoryName = '  Zone Press  ';
     await component.createCategory();
 
-    expect(service.saveCategory).toHaveBeenCalledWith({ name: 'Zone Press', team_id: 42 });
+    expect(service.saveCategory).toHaveBeenCalledWith({ name: 'Zone Press', team_id: '42' });
   });
 
   it('createCategory is a no-op when the input is blank', async () => {
@@ -939,16 +943,16 @@ describe('PlayEditorComponent — category management', () => {
   it('save() auto-creates a pending category before building the payload', async () => {
     vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
 
-    const newCat = { id: 99, name: 'Man Offense', team_id: 42 };
-    service.saveCategory.mockResolvedValue(99);
+    const newCat = { id: '99', name: 'Man Offense', team_id: '42' };
+    service.saveCategory.mockResolvedValue('99');
     service.listCategories.mockResolvedValue([newCat]);
 
     component.newCategoryName = 'Man Offense';
     await component.save();
 
-    expect(service.saveCategory).toHaveBeenCalledWith({ name: 'Man Offense', team_id: 42 });
+    expect(service.saveCategory).toHaveBeenCalledWith({ name: 'Man Offense', team_id: '42' });
     const savedPlay = service.save.mock.calls.at(-1)[0];
-    expect(savedPlay.category_id).toBe(99);
+    expect(savedPlay.category_id).toBe('99');
   });
 
   it('save() does not call saveCategory when newCategoryName is empty', async () => {

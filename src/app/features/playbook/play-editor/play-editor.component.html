@@ -81,7 +81,7 @@
     </aside>
 
     <!-- Court canvas -->
-    <section class="court-wrapper">
+    <section class="court-wrapper" #courtWrapper>
       @if (pendingAction()) {
         <div class="draw-hint">
           Drawing <strong>{{ pendingAction() }}</strong> — drag to place the destination spline from the player center
@@ -189,8 +189,8 @@
 @if (contextMenu()) {
   <div class="ctx-backdrop" (click)="closeContextMenu()"></div>
   <div class="context-menu"
-       [style.left.px]="contextMenu()!.clientX + 8"
-       [style.top.px]="contextMenu()!.clientY - 8"
+       [style.left.px]="contextMenuLeft()"
+       [style.top.px]="contextMenuTop()"
        (click)="$event.stopPropagation()">
 
     @if (!contextMenu()!.isBallCarrier) {

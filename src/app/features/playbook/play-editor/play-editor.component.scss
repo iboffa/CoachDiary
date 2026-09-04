@@ -17,7 +17,13 @@
 .editor-topbar {
   display: flex;
   align-items: center;
+  // .play-meta + .court-toggle + .topbar-actions (5 buttons) don't fit
+  // one row on anything narrower than a wide desktop window — without wrap
+  // the overflow just gets clipped invisibly by .main-content's
+  // `overflow: hidden` (app.scss), silently hiding Save off the right edge.
+  flex-wrap: wrap;
   gap: 16px;
+  row-gap: 8px;
   padding: 10px 16px;
   border-bottom: 1px solid #2a2f3e;
   flex-shrink: 0;
@@ -461,5 +467,104 @@
     height: 1px;
     background: #2a3a5e;
     margin: 3px 4px;
+  }
+}
+
+// ── Mobile layout ──────────────────────────────────────────────
+// .tool-panel (54-66px) + .right-panel (240px) are fixed-width and
+// starve .court-wrapper on narrow viewports, so below this breakpoint
+// (matches the app shell's own breakpoint in app.scss) the columns stack
+// and the court takes the full width instead.
+@media (max-width: 768px) {
+  .play-meta {
+    order: 1;
+    flex-basis: 100%;
+  }
+
+  .court-toggle {
+    order: 2;
+  }
+
+  .topbar-actions {
+    order: 3;
+    flex-wrap: wrap;
+  }
+
+  .editor-body {
+    flex-direction: column;
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+
+  .tool-panel {
+    width: 100%;
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+    border-right: none;
+    border-bottom: 1px solid #2a2f3e;
+  }
+
+  .tool-group {
+    flex-direction: row;
+
+    &__label { display: none; }
+  }
+
+  .court-wrapper {
+    // Not flex-grow: 1 — the court's aspect ratio rarely matches whatever
+    // vertical space is left, and growing here just centers the canvas in
+    // a tall box with dead space above/below it. Let it hug the canvas
+    // instead; fitCanvasToContainer() sizes the canvas from the width alone.
+    flex: 0 0 auto;
+    width: 100%;
+  }
+
+  .right-panel {
+    width: 100%;
+    flex: 0 0 auto;
+    max-height: 45vh;
+    overflow-y: auto;
+    border-left: none;
+    border-top: 1px solid #2a2f3e;
+  }
+
+  // Touch targets — these are well under the ~44px guideline at their
+  // desktop size (34-38px). Player tokens are handled separately in JS
+  // (see MOBILE_TOKEN_RADIUS / MOBILE_PATH_HANDLE_RADIUS in
+  // play-editor.constants.ts) since they're canvas-drawn, not DOM elements.
+  .tool-btn {
+    width: 44px;
+    height: 44px;
+
+    svg { width: 21px; height: 21px; }
+  }
+
+  .toggle-btn {
+    padding: 10px 16px;
+  }
+
+  .anim-btn {
+    width: 44px;
+    height: 44px;
+
+    &.play {
+      width: 50px;
+      height: 50px;
+    }
+  }
+
+  .ctx-btn {
+    min-height: 44px;
+    font-size: 14px;
+  }
+
+  .phase-chip {
+    padding: 6px 10px;
+    font-size: 11px;
+  }
+
+  .speed-control input[type=range] {
+    width: 110px;
   }
 }

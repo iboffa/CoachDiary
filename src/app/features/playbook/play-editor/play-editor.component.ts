@@ -21,6 +21,8 @@ import { PlayCategory } from '../../../shared/models/models';
 import {
   BALL_INDICATOR_RADIUS,
   FIVE_OUT,
+  MOBILE_PATH_HANDLE_RADIUS,
+  MOBILE_TOKEN_RADIUS,
   PATH_STYLES,
   TOKEN_RADIUS,
 } from './play-editor.constants';
@@ -33,20 +35,16 @@ import {
   PhasePath,
   PlayerToken,
   Point,
-  ScheduledPath,
   ShadowToken,
   StoredPath,
   Tool,
 } from './play-editor.models';
 import {
-  buildPhasePathSchedule as createPhasePathSchedule,
-  getBallIndicatorState as resolveBallIndicatorState,
   getCarrierBallIndicatorState as resolveCarrierBallIndicatorState,
-  getPlayerPositionAtTime as resolvePlayerPositionAtTime,
-  getRemainingPathPoints as resolveRemainingPathPoints,
-  getScheduledPathCoverage as resolveScheduledPathCoverage,
   isMovementAction as isMovementPathAction,
 } from './play-editor-path.utils';
+import { PlayAnimationController } from './play-editor-animation-controller';
+import { PlaySaveController } from './play-editor-save-controller';
 import { renderActionPathObjects } from './play-editor-fabric.utils';
 import {
   ensureEditableMovementPoints,
@@ -56,8 +54,8 @@ import {
 } from './play-editor-editing.utils';
 import {
   buildPlayEditorStateSnapshot,
-  buildPlaySavePayload,
   parsePlayEditorCanvasState,
+  PlayEditorPersistedState,
   toDownloadFilename,
 } from './play-editor-persistence.utils';
 import {
@@ -66,7 +64,6 @@ import {
   restoreSavedTokenPositions,
   SavedTokenPosition,
   syncTokensToPhasePositions,
-  syncTokensToResolvedPositions,
   syncTokensToStoredPositions,
 } from './play-editor-token-position.utils';
 import { bindPlayEditorCanvasEvents } from './play-editor-canvas-events.utils';
@@ -88,6 +85,11 @@ import {
   removeTaggedPathHandles as removeFabricTaggedPathHandles,
   syncDraggedShadowPlaceholder as syncFabricDraggedShadowPlaceholder,
 } from './play-editor-fabric-editing.utils';
+
+const COURT_WRAPPER_PADDING = 16; // must match .court-wrapper padding in play-editor.component.scss
+const CTX_MENU_EST_WIDTH = 180; // generous estimate — the menu has no fixed size to measure ahead of layout
+const CTX_MENU_EST_HEIGHT = 240;
+const CTX_MENU_MARGIN = 8;
 
 interface UndoSnapshot {
   phasePaths: StoredPath[];
@@ -114,7 +116,9 @@ export class PlayEditorComponent implements OnDestroy {
   private readonly router = inject(Router);
   private readonly playService = inject(PlayService);
   private readonly canvasRef = viewChild.required<ElementRef<HTMLCanvasElement>>('courtCanvas');
+  private readonly courtWrapperRef = viewChild.required<ElementRef<HTMLElement>>('courtWrapper');
   private fabricCanvas!: Canvas;
+  private readonly onWindowResize = () => this.fitCanvasToContainer();
 
   // ── Reactive signals ──────────────────────────────────────────
   readonly playId    = signal<string | null>(null);
@@ -165,21 +169,7 @@ export class PlayEditorComponent implements OnDestroy {
   private activePathEdit: PathEditState | null = null;
   private selectedPathObject: FabricObject | null = null;
   private mouseDownPoint: Point | null = null;
-  private animFrameId: number | null = null;
   private ballIndicator: Circle | null = null;
-  private animatedPhaseObjects: FabricObject[] = [];
-  private readonly ANIM_DURATION = 2500;
-  private activeAnimResolve: (() => void) | null = null;
-
-  // Pause / rollback state
-  private animTick: FrameRequestCallback | null = null;
-  private animElapsed = 0;
-  private animLastNow: number | null = null;
-  private animDuration = 0;
-  private animPhaseIndex = 0;
-  private animPhase: Phase | null = null;
-  private animScheduledPaths: ScheduledPath[] = [];
-  private pendingRestartPhase: number | null = null;
 
   private undoStack: UndoSnapshot[] = [];
   private editingPhaseIndex: number | null = null;
@@ -190,16 +180,49 @@ export class PlayEditorComponent implements OnDestroy {
     ballCarrierId: string | null;
   } | null = null;
 
+  private readonly animController = new PlayAnimationController({
+    getCanvas: () => this.fabricCanvas,
+    getTokens: () => this.tokens,
+    getPhases: () => this._phases,
+    getCurrentPhasePaths: () => this.currentPhasePaths,
+    getBallCarrierId: () => this.ballCarrierId(),
+    setBallCarrierId: id => this.ballCarrierId.set(id),
+    getBallIndicator: () => this.ballIndicator,
+    setBallIndicator: indicator => { this.ballIndicator = indicator; },
+    getAnimSpeed: () => this.animSpeed(),
+    getShowAnimatedLines: () => this.showAnimatedLines(),
+    getAnimState: () => this.animState(),
+    setAnimState: state => this.animState.set(state),
+    setAnimProgress: progress => this.animProgress.set(progress),
+    clearPathEditing: () => this.clearPathEditing(),
+    clearShadowTokens: () => this.clearShadowTokens(),
+    refreshShadowTokens: () => this.refreshShadowTokens(),
+    bringTokensToFront: () => this.bringTokensToFront(),
+    updateBallIndicator: () => this.updateBallIndicator(),
+  });
+
+  private readonly saveController = new PlaySaveController({
+    getCanvas: () => this.fabricCanvas,
+    getSnapshot: () => this.buildStateSnapshot(),
+    getPlayDesc: () => this.playDesc(),
+    getPlayCat: () => this.playCat(),
+    save: play => this.playService.save(play),
+  });
+
   get phases(): Phase[] { return this._phases; }
 
-  getCurrentPlay = (): PlayEditorState => buildPlayEditorStateSnapshot({
-    tokens: this.tokens,
-    phases: this._phases,
-    ballCarrierId: this.ballCarrierId(),
-    currentPhaseIndex: this.currentPhaseIndex(),
-    currentPhasePaths: this.currentPhasePaths,
-    courtMode: this.courtMode(),
-  }) as unknown as PlayEditorState;
+  private buildStateSnapshot(): PlayEditorPersistedState {
+    return buildPlayEditorStateSnapshot({
+      tokens: this.tokens,
+      phases: this._phases,
+      ballCarrierId: this.ballCarrierId(),
+      currentPhaseIndex: this.currentPhaseIndex(),
+      currentPhasePaths: this.currentPhasePaths,
+      courtMode: this.courtMode(),
+    });
+  }
+
+  getCurrentPlay = (): PlayEditorState => this.buildStateSnapshot() as unknown as PlayEditorState;
 
   readonly teamId: string | null = PlayEditorComponent.parseRouteId(
     this.route.snapshot.paramMap.get('teamId'));
@@ -226,6 +249,8 @@ export class PlayEditorComponent implements OnDestroy {
 
     afterNextRender(() => {
       this.initCanvas();
+      this.fitCanvasToContainer();
+      window.addEventListener('resize', this.onWindowResize);
       if (this.playId()) this.loadPlay();
       else this.placeDefaultPlayers();
     });
@@ -233,6 +258,7 @@ export class PlayEditorComponent implements OnDestroy {
 
   ngOnDestroy(): void {
     this.stopAnimation();
+    window.removeEventListener('resize', this.onWindowResize);
     this.fabricCanvas?.dispose();
   }
 
@@ -288,6 +314,50 @@ export class PlayEditorComponent implements OnDestroy {
     ] as [number, number, number, number, number, number]);
   }
 
+  // Below the mobile breakpoint .editor-body's CSS switches from a row to a
+  // column (see SCSS) — read that back instead of duplicating the breakpoint
+  // value here, so this stays in sync with the actual layout.
+  private isStackedLayout(): boolean {
+    const wrapper = this.courtWrapperRef().nativeElement;
+    return getComputedStyle(wrapper.parentElement!).flexDirection === 'column';
+  }
+
+  private fitCanvasToContainer(): void {
+    if (!this.fabricCanvas) return;
+    const wrapper = this.courtWrapperRef().nativeElement;
+    const { width: baseWidth, height: baseHeight } = courtCanvasSize(this.courtMode());
+    const availWidth = wrapper.clientWidth - COURT_WRAPPER_PADDING * 2;
+    if (availWidth <= 0) return;
+
+    // .court-wrapper no longer flex-grows to fill leftover height when stacked
+    // (see SCSS) — its clientHeight there is just "whatever the canvas currently
+    // is", not a real budget. Scale from width alone in that case, which would
+    // otherwise shrink the canvas to fit its own last-frame size.
+    let scale: number;
+    if (this.isStackedLayout()) {
+      scale = availWidth / baseWidth;
+    } else {
+      const availHeight = wrapper.clientHeight - COURT_WRAPPER_PADDING * 2;
+      if (availHeight <= 0) return;
+      scale = Math.min(availWidth / baseWidth, availHeight / baseHeight);
+    }
+    const clampedScale = Math.min(Math.max(scale, 0.3), 2.5);
+
+    this.fabricCanvas.setDimensions({
+      width: baseWidth * clampedScale,
+      height: baseHeight * clampedScale,
+    });
+    this.fabricCanvas.setViewportTransform([
+      clampedScale,
+      0,
+      0,
+      clampedScale,
+      COURT_OUT_OF_BOUNDS_PADDING * clampedScale,
+      COURT_OUT_OF_BOUNDS_PADDING * clampedScale,
+    ]);
+    this.fabricCanvas.renderAll();
+  }
+
   private placeDefaultPlayers(): void {
     for (let i = 0; i < FIVE_OUT.length; i++) {
       this.spawnToken(`offense-${i + 1}`, 'offense', String(i + 1), FIVE_OUT[i].x, FIVE_OUT[i].y);
@@ -308,6 +378,7 @@ export class PlayEditorComponent implements OnDestroy {
     this.applyCanvasLayout(mode);
     drawCourt(this.fabricCanvas, mode);
     this.attachCanvasEvents();
+    this.fitCanvasToContainer();
     this.placeDefaultPlayers();
   }
 
@@ -422,7 +493,7 @@ export class PlayEditorComponent implements OnDestroy {
   ): Group {
     const isOff = type === 'offense';
     const circle = new Circle({
-      radius: TOKEN_RADIUS,
+      radius: this.isStackedLayout() ? MOBILE_TOKEN_RADIUS : TOKEN_RADIUS,
       fill: isShadow
         ? (isOff ? 'rgba(30,64,175,0.35)' : 'rgba(109,40,217,0.35)')
         : (isOff ? '#1e3a5f' : '#2d1f3f'),
@@ -473,7 +544,10 @@ export class PlayEditorComponent implements OnDestroy {
   }
 
   private createPathControlHandle(path: PhasePath): Circle {
-    return createFabricPathControlHandle(path);
+    return createFabricPathControlHandle(
+      path,
+      this.isStackedLayout() ? MOBILE_PATH_HANDLE_RADIUS : undefined,
+    );
   }
 
   private clearShadowTokens(): void {
@@ -646,22 +720,6 @@ export class PlayEditorComponent implements OnDestroy {
     this.fabricCanvas.renderAll();
   }
 
-  private ensureBallIndicator(): void {
-    if (this.ballIndicator) return;
-    this.ballIndicator = new Circle({
-      radius: BALL_INDICATOR_RADIUS,
-      fill: '#f97316',
-      stroke: '#7c2d12',
-      strokeWidth: 1.5,
-      left: 0,
-      top: 0,
-      selectable: false,
-      evented: false,
-      visible: false,
-    });
-    this.fabricCanvas.add(this.ballIndicator);
-  }
-
   private bringBallIndicatorToFront(): void {
     if (!this.ballIndicator) return;
     this.fabricCanvas.remove(this.ballIndicator);
@@ -678,67 +736,26 @@ export class PlayEditorComponent implements OnDestroy {
     this.bringBallIndicatorToFront();
   }
 
-  private clearAnimatedPhaseObjects(): void {
-    if (this.animatedPhaseObjects.length === 0) return;
-    this.animatedPhaseObjects.forEach(obj => this.fabricCanvas.remove(obj));
-    this.animatedPhaseObjects = [];
-  }
-
-  private lerpPoint(a: Point, b: Point, t: number): Point {
-    return {
-      x: a.x + (b.x - a.x) * t,
-      y: a.y + (b.y - a.y) * t,
-    };
-  }
-
-  private splitQuadraticFrom(start: Point, control: Point, end: Point, t: number): Point[] {
-    const q0 = this.lerpPoint(start, control, t);
-    const q1 = this.lerpPoint(control, end, t);
-    const r0 = this.lerpPoint(q0, q1, t);
-    return [r0, q1, end];
-  }
-
-  private buildPhasePathSchedule(phase: Phase): ScheduledPath[] {
-    return createPhasePathSchedule(phase);
-  }
-
-  private getScheduledPathCoverage(path: ScheduledPath, t: number): number {
-    return resolveScheduledPathCoverage(path, t);
-  }
-
-  private getRemainingPathPoints(action: ActionType, points: Point[], coverage: number): Point[] | null {
-    return resolveRemainingPathPoints(action, points, coverage);
-  }
-
-  private createAnimatedPathObjects(path: StoredPath, coverage: number): FabricObject[] {
-    const remainingPoints = this.getRemainingPathPoints(path.actionType, path.points, coverage);
-    if (!remainingPoints || remainingPoints.length < 2) return [];
-
-    return renderActionPathObjects({
-      canvas: this.fabricCanvas,
-      actionType: path.actionType,
-      points: remainingPoints,
-      style: PATH_STYLES[path.actionType],
-      opacity: path.actionType === 'shoot' ? undefined : 0.9,
-      preferLinePath: true,
-    });
-  }
-
-  private updateAnimatedPhaseObjects(phase: Phase, scheduledPaths: ScheduledPath[], t: number): void {
-    this.clearAnimatedPhaseObjects();
-    if (!this.showAnimatedLines()) return;
-
-    for (const scheduledPath of scheduledPaths) {
-      const coverage = this.getScheduledPathCoverage(scheduledPath, t);
-      this.animatedPhaseObjects.push(...this.createAnimatedPathObjects(scheduledPath.path, coverage));
-    }
-
-    this.bringTokensToFront();
-  }
-
   // ── Context menu ──────────────────────────────────────────────
 
   closeContextMenu(): void { this.contextMenu.set(null); }
+
+  // Keeps the menu fully on-screen — on narrow viewports a tap near the
+  // right/bottom edge of the (now full-width) court would otherwise open
+  // it partly or fully off-screen and unreachable.
+  contextMenuLeft(): number {
+    const menu = this.contextMenu();
+    if (!menu) return 0;
+    const maxLeft = window.innerWidth - CTX_MENU_EST_WIDTH - CTX_MENU_MARGIN;
+    return Math.max(CTX_MENU_MARGIN, Math.min(menu.clientX + CTX_MENU_MARGIN, maxLeft));
+  }
+
+  contextMenuTop(): number {
+    const menu = this.contextMenu();
+    if (!menu) return 0;
+    const maxTop = window.innerHeight - CTX_MENU_EST_HEIGHT - CTX_MENU_MARGIN;
+    return Math.max(CTX_MENU_MARGIN, Math.min(menu.clientY - CTX_MENU_MARGIN, maxTop));
+  }
 
   setBallCarrier(playerId: string): void {
     if (this.isPlayFinalized()) {
@@ -1166,232 +1183,20 @@ export class PlayEditorComponent implements OnDestroy {
 
   // ── Animation ─────────────────────────────────────────────────
 
-  async previewPlay(startPhaseIndex = 0, startPaused = false): Promise<void> {
-    if (this._phases.length === 0) return;
-    this.clearPathEditing();
-    this.clearAnimatedPhaseObjects();
-    this.ensureBallIndicator();
-
-    const savedPositions = captureTokenPositions(this.tokens);
-    const savedBallCarrier = this.ballCarrierId();
-
-    this.currentPhasePaths.forEach(p => p.fabricObjects.forEach(o => o.set({ visible: false })));
-    this.clearShadowTokens();
-
-    const startPhase = this._phases[startPhaseIndex];
-    syncTokensToPhasePositions(this.tokens, startPhase.playerPositions);
-
-    const initialSchedule = this.buildPhasePathSchedule(startPhase);
-    this.positionBallAtPhaseStart(startPhase, initialSchedule);
-    this.fabricCanvas.renderAll();
-
-    this.animState.set(startPaused ? 'paused' : 'playing');
-    this.animPhaseIndex = startPhaseIndex;
-    this.animPhase = startPhase;
-    this.animScheduledPaths = initialSchedule;
-
-    try {
-      for (const [i, phase] of this._phases.entries()) {
-        if (i < startPhaseIndex) continue;
-
-        // Wait while paused between phases
-        while (this.animState() === 'paused') {
-          await new Promise<void>(r => setTimeout(r, 50));
-        }
-        if (this.animState() === 'idle') break;
-
-        this.animPhaseIndex = i;
-        this.animProgress.set(i / this._phases.length);
-        await this.animatePhase(phase);
-      }
-
-      // Brief hold at the end so user can see final state
-      while (this.animState() === 'paused') {
-        await new Promise<void>(r => setTimeout(r, 50));
-      }
-      if (this.animState() !== 'idle') {
-        this.animProgress.set(1);
-        await new Promise<void>(r => setTimeout(r, 600));
-      }
-    } finally {
-      const restartPhase = this.pendingRestartPhase;
-      this.pendingRestartPhase = null;
-
-      this.animState.set('idle');
-      this.animProgress.set(0);
-      this.animTick = null;
-      this.animPhase = null;
-      this.animScheduledPaths = [];
-
-      restoreSavedTokenPositions(this.tokens, savedPositions);
-      this.ballCarrierId.set(savedBallCarrier);
-      this.clearAnimatedPhaseObjects();
-      this.updateBallIndicator();
-
-      this.currentPhasePaths.forEach(p => p.fabricObjects.forEach(o => o.set({ visible: true })));
-      this.refreshShadowTokens();
-      this.fabricCanvas.renderAll();
-
-      if (restartPhase !== null) {
-        setTimeout(() => this.previewPlay(restartPhase, true), 50);
-      }
-    }
-  }
-
-  private animatePhase(phase: Phase): Promise<void> {
-    return new Promise(resolve => {
-      this.activeAnimResolve = resolve;
-      const scheduledPaths = this.buildPhasePathSchedule(phase);
-      this.animPhase = phase;
-      this.animScheduledPaths = scheduledPaths;
-      this.ensureBallIndicator();
-
-      syncTokensToPhasePositions(this.tokens, phase.playerPositions);
-      this.positionBallAtPhaseStart(phase, scheduledPaths);
-      this.updateAnimatedPhaseObjects(phase, scheduledPaths, 0);
-      this.fabricCanvas.renderAll();
-
-      const PRE_DELAY = 300;
-      const duration = this.ANIM_DURATION / this.animSpeed();
-      this.animDuration = duration;
-      this.animElapsed = 0;
-      this.animLastNow = null;
-
-      setTimeout(() => {
-        if (this.animState() === 'idle') {
-          this.clearAnimatedPhaseObjects();
-          this.fabricCanvas.renderAll();
-          this.activeAnimResolve = null;
-          resolve();
-          return;
-        }
-
-        const renderAt = (t: number) => {
-          syncTokensToResolvedPositions(
-            this.tokens,
-            token => this.getPlayerPositionAtTime(token.id, phase, scheduledPaths, t),
-          );
-          this.animateBallForPhase(phase, scheduledPaths, t);
-          this.updateAnimatedPhaseObjects(phase, scheduledPaths, t);
-          this.fabricCanvas.renderAll();
-        };
-
-        const tick: FrameRequestCallback = (now) => {
-          const state = this.animState();
-
-          if (state === 'idle') {
-            this.activeAnimResolve = null;
-            resolve();
-            return;
-          }
-
-          if (state === 'paused') {
-            this.animLastNow = null; // reset delta so resume doesn't jump
-            return; // freeze — no next frame
-          }
-
-          if (this.animLastNow !== null) {
-            this.animElapsed += now - this.animLastNow;
-          }
-          this.animLastNow = now;
-
-          const t = Math.min(this.animElapsed / duration, 1);
-          renderAt(t);
-
-          if (t < 1) {
-            this.animFrameId = requestAnimationFrame(tick);
-          } else {
-            renderAt(1);
-            this.clearAnimatedPhaseObjects();
-            this.fabricCanvas.renderAll();
-            this.animElapsed = 0;
-            this.animLastNow = null;
-            this.activeAnimResolve = null;
-            resolve();
-          }
-        };
-
-        this.animTick = tick;
-        this.animFrameId = requestAnimationFrame(tick);
-      }, PRE_DELAY);
-    });
-  }
-
-  private getPlayerPositionAtTime(ownerId: string, phase: Phase, scheduledPaths: ScheduledPath[], t: number): Point | null {
-    return resolvePlayerPositionAtTime(ownerId, phase, scheduledPaths, t);
-  }
-
-  private positionBallAtPhaseStart(phase: Phase, scheduledPaths: ScheduledPath[]): void {
-    if (!this.ballIndicator) return;
-    this.ballIndicator.set(resolveBallIndicatorState(phase, scheduledPaths, 0));
-  }
-
-  private animateBallForPhase(phase: Phase, scheduledPaths: ScheduledPath[], t: number): void {
-    if (!this.ballIndicator) return;
-    this.ballIndicator.set(resolveBallIndicatorState(phase, scheduledPaths, t));
+  previewPlay(startPhaseIndex = 0, startPaused = false): Promise<void> {
+    return this.animController.preview(startPhaseIndex, startPaused);
   }
 
   stopAnimation(): void {
-    if (this.animFrameId) {
-      cancelAnimationFrame(this.animFrameId);
-      this.animFrameId = null;
-    }
-    this.animTick = null;
-    this.animElapsed = 0;
-    this.animLastNow = null;
-    this.clearAnimatedPhaseObjects();
-    if (this.activeAnimResolve) {
-      const resolve = this.activeAnimResolve;
-      this.activeAnimResolve = null;
-      resolve();
-    }
-    this.animState.set('idle');
-    this.animProgress.set(0);
+    this.animController.stop();
   }
 
   togglePause(): void {
-    if (this.animState() === 'playing') {
-      this.animState.set('paused');
-      // tick detects 'paused' on next frame and stops itself
-    } else if (this.animState() === 'paused') {
-      this.animState.set('playing');
-      this.animLastNow = null; // prevent elapsed jump on resume
-      if (this.animTick) {
-        this.animFrameId = requestAnimationFrame(this.animTick);
-      }
-    }
+    this.animController.togglePause();
   }
 
   rollbackPhase(): void {
-    if (!this.isAnimating()) return;
-
-    const REWIND_THRESHOLD_MS = 400;
-
-    if (this.animElapsed > REWIND_THRESHOLD_MS || this.animPhaseIndex === 0) {
-      // Rewind to start of current phase, paused
-      this.animElapsed = 0;
-      this.animLastNow = null;
-      if (this.animState() === 'playing') {
-        this.animState.set('paused');
-      }
-      if (this.animPhase) {
-        syncTokensToPhasePositions(this.tokens, this.animPhase.playerPositions);
-        this.positionBallAtPhaseStart(this.animPhase, this.animScheduledPaths);
-        this.updateAnimatedPhaseObjects(this.animPhase, this.animScheduledPaths, 0);
-        this.fabricCanvas.renderAll();
-      }
-    } else {
-      // Step back to previous phase — stop current play and restart from there
-      this.pendingRestartPhase = this.animPhaseIndex - 1;
-      if (this.animFrameId) {
-        cancelAnimationFrame(this.animFrameId);
-        this.animFrameId = null;
-      }
-      const resolve = this.activeAnimResolve;
-      this.activeAnimResolve = null;
-      this.animState.set('idle'); // triggers previewPlay loop to break
-      resolve?.();
-    }
+    this.animController.rollbackPhase();
   }
 
   // ── Save / Load ───────────────────────────────────────────────
@@ -1401,27 +1206,11 @@ export class PlayEditorComponent implements OnDestroy {
     this.clearPathEditing();
     this.saving.set(true);
     try {
-      const state = buildPlayEditorStateSnapshot({
-        tokens: this.tokens,
-        phases: this._phases,
-        ballCarrierId: this.ballCarrierId(),
-        currentPhaseIndex: this.currentPhaseIndex(),
-        currentPhasePaths: this.currentPhasePaths,
-        courtMode: this.courtMode(),
-      });
       if (this.newCategoryName.trim()) await this.createCategory();
-      const play = buildPlaySavePayload({
+      const id = await this.saveController.persist({
         playId: this.playId(),
         name: this.playName(),
-        description: this.playDesc(),
-        category_id: this.playCat(),
-        state,
-        thumbnail: this.fabricCanvas.toDataURL({ multiplier: 1, format: 'jpeg', quality: 0.6 }),
-      });
-      const id = await this.playService.save({
-        ...play,
-        team_id: this.teamId ?? undefined,
-        opponent_id: this.oppId ?? undefined,
+        extra: { team_id: this.teamId ?? undefined, opponent_id: this.oppId ?? undefined },
       });
       if (!this.playId()) {
         this.playId.set(id);
@@ -1437,26 +1226,10 @@ export class PlayEditorComponent implements OnDestroy {
     this.clearPathEditing();
     this.duplicating.set(true);
     try {
-      const state = buildPlayEditorStateSnapshot({
-        tokens: this.tokens,
-        phases: this._phases,
-        ballCarrierId: this.ballCarrierId(),
-        currentPhaseIndex: this.currentPhaseIndex(),
-        currentPhasePaths: this.currentPhasePaths,
-        courtMode: this.courtMode(),
-      });
-      const play = buildPlaySavePayload({
+      const newId = await this.saveController.persist({
         playId: null,
         name: `Copy of ${this.playName()}`,
-        description: this.playDesc(),
-        category_id: this.playCat(),
-        state,
-        thumbnail: this.fabricCanvas.toDataURL({ multiplier: 1, format: 'jpeg', quality: 0.6 }),
-      });
-      const newId = await this.playService.save({
-        ...play,
-        team_id: this.teamId ?? undefined,
-        opponent_id: this.oppId ?? undefined,
+        extra: { team_id: this.teamId ?? undefined, opponent_id: this.oppId ?? undefined },
       });
       this.router.navigate([...this.listPath, newId], { replaceUrl: false });
     } finally {
@@ -1469,23 +1242,11 @@ export class PlayEditorComponent implements OnDestroy {
     this.clearPathEditing();
     this.savingTemplate.set(true);
     try {
-      const state = buildPlayEditorStateSnapshot({
-        tokens: this.tokens,
-        phases: this._phases,
-        ballCarrierId: this.ballCarrierId(),
-        currentPhaseIndex: this.currentPhaseIndex(),
-        currentPhasePaths: this.currentPhasePaths,
-        courtMode: this.courtMode(),
-      });
-      const play = buildPlaySavePayload({
+      await this.saveController.persist({
         playId: null,
         name: this.playName(),
-        description: this.playDesc(),
-        category_id: this.playCat(),
-        state,
-        thumbnail: this.fabricCanvas.toDataURL({ multiplier: 1, format: 'jpeg', quality: 0.6 }),
+        extra: { is_template: true },
       });
-      await this.playService.save({ ...play, is_template: true });
     } finally {
       this.savingTemplate.set(false);
     }
@@ -1605,7 +1366,7 @@ export class PlayEditorComponent implements OnDestroy {
       phases: this._phases,
       downloadFilename: toDownloadFilename(this.playName(), 'webm'),
       isPlaying: () => this.isPlaying(),
-      animatePhase: phase => this.animatePhase(phase),
+      animatePhase: phase => this.animController.animatePhase(phase),
       onStart: () => {
         this.animState.set('playing');
       },

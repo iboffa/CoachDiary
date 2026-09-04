@@ -1,5 +1,5 @@
 import { Circle, FabricObject, Group } from 'fabric';
-import { PATH_STYLES } from './play-editor.constants';
+import { PATH_HANDLE_RADIUS, PATH_STYLES } from './play-editor.constants';
 import {
   ensureEditableMovementPoints,
   findLatestMovementPath,
@@ -90,10 +90,10 @@ function isBallDependentAction(action: PhasePath['actionType']): boolean {
   return isPassLikeAction(action) || action === 'shoot';
 }
 
-export function createPathControlHandle(path: PhasePath): Circle {
+export function createPathControlHandle(path: PhasePath, radius = PATH_HANDLE_RADIUS): Circle {
   const style = PATH_STYLES[path.actionType];
   const handle = new Circle({
-    radius: 8,
+    radius,
     fill: '#ffffff',
     stroke: style.stroke,
     strokeWidth: 2,
