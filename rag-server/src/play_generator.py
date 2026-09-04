@@ -349,7 +349,10 @@ def handle_generate_play(request: PlayRequest) -> PlayResponse:
         if all_issues:
             print(f"[generator] validation issues: {all_issues}")
             if attempt == 0:
-                prior_issues = all_issues
+                # Don't feed an infrastructure-only failure (critique parsing broke) back
+                # to the generator as something for it to "fix" — it has no actionable
+                # response to that. Retry with whatever real, fixable issues remain.
+                prior_issues = [i for i in all_issues if not i.startswith("critique unavailable:")]
                 continue
             print("[generator] issues remain after retry — returning best effort")
 

@@ -30,6 +30,17 @@ def test_critique_play_returns_sentinel_issue_on_unparseable_response(mock_clien
 
 
 @patch("src.play_generator._client")
+def test_critique_play_returns_sentinel_when_fenced_but_still_unparseable(mock_client):
+    mock_client.messages.create.return_value = _mock_response(
+        "```json\nnot json even after stripping the fence\n```"
+    )
+
+    issues = _critique_play("test play", {"name": "Test", "description": "d", "play": {}})
+
+    assert issues == ["critique unavailable: could not parse Haiku's response"]
+
+
+@patch("src.play_generator._client")
 def test_critique_play_returns_empty_when_valid(mock_client):
     mock_client.messages.create.return_value = _mock_response('{"valid": true}')
 
