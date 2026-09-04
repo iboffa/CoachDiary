@@ -18,6 +18,7 @@ from pathlib import Path
 from src.config import GENERATION_MODEL, QUERY_MODEL
 from src.models import PlayRequest
 from src.play_generator import handle_generate_play, validate_play
+from src.vector_store import retrieve
 from eval.test_cases import TEST_CASES, TestCase
 from eval.report import EvalResult, format_report
 
@@ -39,9 +40,11 @@ def _run_one(case: TestCase) -> EvalResult:
 def run(cases: list[TestCase]) -> list[EvalResult]:
     results_by_id: dict[str, EvalResult] = {}
     with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
-        future_to_id = {executor.submit(_run_one, case): case.id for case in cases}
-        for future in as_completed(future_to_id):
+        futures = [executor.submit(_run_one, case) for case in cases]
+        for future in as_completed(futures):
             result = future.result()
+            status = "PASS" if result.passed else "FAIL"
+            print(f"  [{status}] {result.id}")
             results_by_id[result.id] = result
     # Report in the original test-case order regardless of completion order.
     return [results_by_id[case.id] for case in cases]
@@ -54,18 +57,26 @@ def main() -> None:
         help="Only run the first N test cases (for cheap smoke testing).",
     )
     args = parser.parse_args()
+    if args.limit is not None and args.limit < 1:
+        parser.error("--limit must be a positive integer")
 
-    cases = TEST_CASES[: args.limit] if args.limit else TEST_CASES
+    cases = TEST_CASES[: args.limit] if args.limit is not None else TEST_CASES
     print(f"Running {len(cases)} play-generation test case(s) with {MAX_WORKERS} concurrent workers...")
+
+    print("Checking knowledge base is ingested...")
+    if not retrieve("pick and roll", k=1):
+        raise SystemExit("Knowledge base is empty — run `python ingest.py` first.")
 
     results = run(cases)
 
-    report = format_report(results, GENERATION_MODEL, QUERY_MODEL, datetime.now())
-    print(report)
+    run_time = datetime.now()
+    report = format_report(results, GENERATION_MODEL, QUERY_MODEL, run_time)
 
     REPORTS_DIR.mkdir(parents=True, exist_ok=True)
-    report_path = REPORTS_DIR / f"{datetime.now().strftime('%Y%m%d_%H%M%S')}.md"
+    report_path = REPORTS_DIR / f"{run_time.strftime('%Y%m%d_%H%M%S')}.md"
     report_path.write_text(report, encoding="utf-8")
+
+    print(report)
     print(f"\nReport written to {report_path}")
 
 
