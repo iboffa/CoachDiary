@@ -12,8 +12,8 @@ const GOALS: SeasonGoal[] = [
 
 const PLANS: SeasonPlan[] = [
   {
-    id: 1,
-    team_id: 1,
+    id: '1',
+    team_id: '1',
     name: '2025-26 Season',
     season_year: '2025-26',
     start_date: '2025-09-01',
@@ -21,8 +21,8 @@ const PLANS: SeasonPlan[] = [
     goals: JSON.stringify(GOALS),
   },
   {
-    id: 2,
-    team_id: 1,
+    id: '2',
+    team_id: '1',
     name: '2024-25 Season',
     season_year: '2024-25',
     goals: '[]',
@@ -37,13 +37,13 @@ describe('SeasonComponent', () => {
     service = {
       list:   vi.fn().mockResolvedValue([]),
       get:    vi.fn().mockResolvedValue(undefined),
-      save:   vi.fn().mockResolvedValue(1),
+      save:   vi.fn().mockResolvedValue('1'),
       delete: vi.fn().mockResolvedValue(undefined),
     };
 
     const scheduleService = {
       list:   vi.fn().mockResolvedValue([]),
-      add:    vi.fn().mockResolvedValue(1),
+      add:    vi.fn().mockResolvedValue('1'),
       update: vi.fn().mockResolvedValue(undefined),
       delete: vi.fn().mockResolvedValue(undefined),
     };
@@ -171,16 +171,16 @@ describe('SeasonComponent', () => {
 
   describe('save', () => {
     it('calls service.save with the correct team_id', async () => {
-      service.list.mockResolvedValue([{ ...PLANS[0], id: 1 }]);
+      service.list.mockResolvedValue([{ ...PLANS[0], id: '1' }]);
       component.newPlan();
       component.editingPlan.name = 'New Plan';
       await component.save();
       const saved: SeasonPlan = service.save.mock.calls[0][0];
-      expect(saved.team_id).toBe(1);
+      expect(saved.team_id).toBe('1');
     });
 
     it('serialises editingGoals into the goals field', async () => {
-      service.list.mockResolvedValue([{ ...PLANS[0], id: 1 }]);
+      service.list.mockResolvedValue([{ ...PLANS[0], id: '1' }]);
       component.newPlan();
       component.editingPlan.name = 'New Plan';
       component.addGoal();
@@ -206,7 +206,7 @@ describe('SeasonComponent', () => {
     });
 
     it('sets isNew to false after saving', async () => {
-      service.list.mockResolvedValue([{ ...PLANS[0], id: 1 }]);
+      service.list.mockResolvedValue([{ ...PLANS[0], id: '1' }]);
       component.newPlan();
       component.editingPlan.name = 'New Plan';
       await component.save();
@@ -220,13 +220,13 @@ describe('SeasonComponent', () => {
     it('calls service.delete with the correct id', async () => {
       service.list.mockResolvedValue([]);
       vi.spyOn(window, 'confirm').mockReturnValue(true);
-      await component.deletePlan(1, new MouseEvent('click'));
-      expect(service.delete).toHaveBeenCalledWith(1);
+      await component.deletePlan('1', new MouseEvent('click'));
+      expect(service.delete).toHaveBeenCalledWith('1');
     });
 
     it('does not delete when confirm returns false', async () => {
       vi.spyOn(window, 'confirm').mockReturnValue(false);
-      await component.deletePlan(1, new MouseEvent('click'));
+      await component.deletePlan('1', new MouseEvent('click'));
       expect(service.delete).not.toHaveBeenCalled();
     });
 
@@ -234,7 +234,7 @@ describe('SeasonComponent', () => {
       service.list.mockResolvedValue([]);
       vi.spyOn(window, 'confirm').mockReturnValue(true);
       component.selectPlan(PLANS[0]);
-      await component.deletePlan(1, new MouseEvent('click'));
+      await component.deletePlan('1', new MouseEvent('click'));
       expect(component.showForm()).toBe(false);
     });
   });
@@ -308,7 +308,7 @@ describe('SeasonComponent', () => {
 
     it('doneCount returns 0 when no goals are done', () => {
       const plan: SeasonPlan = {
-        id: 3, team_id: 1, name: 'Plan', goals: JSON.stringify([
+        id: '3', team_id: '1', name: 'Plan', goals: JSON.stringify([
           { id: 'x', text: 'Goal', done: false },
         ]),
       };
