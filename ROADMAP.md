@@ -13,6 +13,8 @@
 | Tasks — team-level task list (/teams/:teamId/tasks), player-scoped tasks on player detail, calendar chip integration for due-date tasks, TasksService, DB v11, unit tests | 2026-06-12 |
 | Supabase migration — Postgres schema + RLS (phase 1), Supabase Auth/login/route guard (phase 2), DbService rewritten on Supabase client, Dexie fully removed | 2026-08-24 |
 | Capacitor Android mobile — native Android wrapper, account settings page, OAuth deep-link (coachdiary://auth-callback), Capacitor App/Browser plugin; auth/RLS hardening (session-desync fix, handle_new_user trigger search_path bug, teams RLS self-reference bug) | 2026-08-24 |
+| RLS hardening — closed a cross-tenant bypass where a nullable `team_id` let rows leak across teams | 2026-09-04 |
+| Play editor mobile touch targets — larger tap targets on tokens/path handles below the mobile breakpoint, context menu clamped to court bounds; phase-preview/playback and save/duplicate logic extracted into `PlayAnimationController`/`PlaySaveController` | 2026-09-04 |
 
 ## Backlog (sorted by score)
 
@@ -60,7 +62,7 @@ Steps that must happen in order:
 - **DB:** Supabase (Postgres + Supabase Auth); Dexie/IndexedDB fully removed. Schema in Supabase migrations; RLS via `is_team_member()`. Team-level RLS hardened (session-desync, handle_new_user trigger, teams self-reference bug all fixed).
 - Standalone Angular components, SCSS
 - Fabric.js for the play/drill canvas editor
-- **Mobile:** Capacitor Android wrapper merged; OAuth deep-link via `coachdiary://auth-callback` custom scheme; Capacitor App + Browser plugins.
-- Unit tests: Vitest; e2e: Playwright
+- **Mobile:** Capacitor Android wrapper merged; OAuth deep-link via `coachdiary://auth-callback` custom scheme; Capacitor App + Browser plugins; play editor tap targets sized up below the mobile breakpoint.
+- Unit tests: Vitest (`@angular/build:unit-test` runner); e2e: Playwright. As of 2026-09-04 the full suite (15 files, 310 tests) is green — several fabric.js-heavy play-editor specs run close to the default 30s timeout in this environment and are bumped to 60s.
 - Electron main ↔ Angular renderer via IPC (`contextBridge`)
 - Per-element RLS visibility, staff/player invites, and admin roles are still backlog #2.
