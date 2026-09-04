@@ -264,7 +264,7 @@ def _critique_play(description: str, data: dict) -> list[str]:
     play_json = json.dumps(data, indent=2)
     response = _client.messages.create(
         model=QUERY_MODEL,
-        max_tokens=256,
+        max_tokens=1024,
         system=_CRITIQUE_SYSTEM,
         messages=[
             {
@@ -277,6 +277,9 @@ def _critique_play(description: str, data: dict) -> list[str]:
         ],
     )
     raw = response.content[0].text.strip()
+    if raw.startswith("```"):
+        raw = raw.split("\n", 1)[1] if "\n" in raw else raw
+        raw = raw.rsplit("```", 1)[0].strip()
     try:
         result = json.loads(raw)
         if result.get("valid"):
@@ -284,7 +287,7 @@ def _critique_play(description: str, data: dict) -> list[str]:
         return result.get("issues", [])
     except json.JSONDecodeError:
         print(f"[generator] critique parse error, skipping: {raw[:200]}")
-        return []
+        return ["critique unavailable: could not parse Haiku's response"]
 
 
 def validate_play(description: str, data: dict, play_state: PlayEditorState) -> list[str]:
@@ -351,7 +354,10 @@ def handle_generate_play(request: PlayRequest) -> PlayResponse:
         if all_issues:
             print(f"[generator] validation issues: {all_issues}")
             if attempt == 0:
-                prior_issues = all_issues
+                # Don't feed an infrastructure-only failure (critique parsing broke) back
+                # to the generator as something for it to "fix" — it has no actionable
+                # response to that. Retry with whatever real, fixable issues remain.
+                prior_issues = [i for i in all_issues if not i.startswith("critique unavailable:")]
                 continue
             print("[generator] issues remain after retry — returning best effort")
 
